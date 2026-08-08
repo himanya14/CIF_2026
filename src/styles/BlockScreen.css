@@ -1,0 +1,517 @@
+/* ===========================
+   BLOCK SCREEN WRAPPER
+=========================== */
+
+.block-screen{
+    padding:28px;
+    background:#081321;
+    min-height:100vh;
+}
+
+.block-screen-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:24px;
+    flex-wrap:wrap;
+    gap:14px;
+}
+
+.block-screen-header h1{
+    color:white;
+    font-size:26px;
+}
+
+.block-screen-header p{
+    color:#7f95b2;
+    font-size:14px;
+    margin-top:4px;
+}
+
+.back-link{
+    color:#00d4ff;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    background:none;
+    border:none;
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.back-link:hover{
+    text-decoration:underline;
+}
+
+/* ===========================
+   SCENARIO TABS
+=========================== */
+
+.scenario-tabs{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:26px;
+}
+
+.scenario-tab{
+    background:#111d31;
+    border:1px solid #223b5b;
+    color:#9fb2cc;
+    padding:10px 18px;
+    border-radius:14px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.2s;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.scenario-tab:hover{
+    border-color:#3ea6ff;
+    color:white;
+}
+
+.scenario-tab.active{
+    background:#16233b;
+    color:white;
+    box-shadow:0 0 0 1px var(--tab-color, #00d4ff) inset;
+}
+
+.scenario-tab .dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    flex-shrink:0;
+}
+
+/* ===========================
+   RECEIPT CARD
+=========================== */
+
+.receipt-card{
+    background:#111d31;
+    border:1px solid #223b5b;
+    border-radius:22px;
+    overflow:hidden;
+    max-width:980px;
+}
+
+.receipt-top{
+    background:linear-gradient(135deg, rgba(255,77,79,.16), rgba(17,29,49,0));
+    padding:26px 30px;
+    border-bottom:1px solid #223b5b;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    flex-wrap:wrap;
+    gap:16px;
+}
+
+.receipt-top.honey{
+    background:linear-gradient(135deg, rgba(255,176,0,.16), rgba(17,29,49,0));
+}
+
+.receipt-status{
+    display:flex;
+    align-items:center;
+    gap:14px;
+}
+
+.receipt-status-icon{
+    width:52px;
+    height:52px;
+    border-radius:16px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:24px;
+    background:rgba(255,77,79,.15);
+    color:#ff4d4f;
+    flex-shrink:0;
+}
+
+.receipt-status-icon.honey{
+    background:rgba(255,176,0,.15);
+    color:#ffb000;
+}
+
+.receipt-status h2{
+    color:white;
+    font-size:22px;
+    letter-spacing:.5px;
+}
+
+.receipt-status span{
+    color:#9fb2cc;
+    font-size:13px;
+}
+
+.receipt-meta{
+    text-align:right;
+    font-size:13px;
+    color:#7f95b2;
+}
+
+.receipt-meta strong{
+    color:white;
+    display:block;
+    font-size:14px;
+}
+
+.severity-badge{
+    display:inline-block;
+    margin-top:6px;
+    padding:4px 12px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+}
+
+/* ===========================
+   DPDP BANNER
+=========================== */
+
+.dpdp-banner{
+    margin:0 30px;
+    margin-top:22px;
+    background:#1a0f0f;
+    border:1px solid #4a1f1f;
+    border-radius:16px;
+    padding:18px 22px;
+}
+
+.dpdp-banner.honey{
+    background:#1f180a;
+    border:1px solid #4a3a1f;
+}
+
+.dpdp-banner-title{
+    color:#ff6b6b;
+    font-weight:800;
+    font-size:15px;
+    letter-spacing:.3px;
+    margin-bottom:10px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.dpdp-banner.honey .dpdp-banner-title{
+    color:#ffc247;
+}
+
+.dpdp-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+}
+
+.dpdp-grid div span{
+    display:block;
+    color:#8fa0ba;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    margin-bottom:4px;
+}
+
+.dpdp-grid div strong{
+    color:white;
+    font-size:16px;
+}
+
+.dpdp-grid div.penalty strong{
+    color:#ff8080;
+    font-size:19px;
+}
+
+.dpdp-banner.honey .dpdp-grid div.penalty strong{
+    color:#ffc247;
+}
+
+/* ===========================
+   SECTION BLOCKS
+=========================== */
+
+.receipt-body{
+    padding:26px 30px 30px;
+    display:flex;
+    flex-direction:column;
+    gap:24px;
+}
+
+.receipt-section h3{
+    color:white;
+    font-size:15px;
+    margin-bottom:12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+
+.receipt-section h3 svg{
+    color:#00d4ff;
+}
+
+/* terminal box for the caught prompt */
+
+.terminal-box{
+    background:#070d17;
+    border:1px solid #1d3150;
+    border-radius:14px;
+    padding:16px 18px;
+    font-family:"Courier New",monospace;
+    font-size:13.5px;
+    line-height:1.7;
+    color:#c7d5e8;
+    white-space:pre-wrap;
+    word-break:break-word;
+}
+
+.caught-chips{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:14px;
+}
+
+.caught-chip{
+    background:#26130f;
+    border:1px solid #5c2620;
+    color:#ffb3ab;
+    padding:8px 14px;
+    border-radius:12px;
+    font-size:12.5px;
+    font-family:"Courier New",monospace;
+}
+
+.caught-chip span{
+    display:block;
+    color:#c98f88;
+    font-family:Arial,sans-serif;
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    margin-bottom:3px;
+}
+
+.detection-note{
+    margin-top:12px;
+    color:#8fa0ba;
+    font-size:13px;
+    line-height:1.6;
+}
+
+/* two column: policy + impact */
+
+.two-col{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:22px;
+}
+
+.info-card{
+    background:#0c1626;
+    border:1px solid #223b5b;
+    border-radius:16px;
+    padding:20px;
+}
+
+.info-card h3{
+    color:white;
+    font-size:14px;
+    margin-bottom:10px;
+}
+
+.rule-id-tag{
+    display:inline-block;
+    background:#16233b;
+    color:#3ea6ff;
+    border:1px solid #2a4a75;
+    padding:3px 10px;
+    border-radius:8px;
+    font-size:11px;
+    font-weight:700;
+    font-family:"Courier New",monospace;
+    margin-bottom:10px;
+}
+
+.info-card p{
+    color:#9fb2cc;
+    font-size:13px;
+    line-height:1.7;
+    margin-bottom:10px;
+}
+
+.info-card .reg-line{
+    color:#7f95b2;
+    font-size:12px;
+    border-top:1px dashed #223b5b;
+    padding-top:10px;
+    line-height:1.6;
+}
+
+.impact-amount{
+    font-size:30px;
+    font-weight:800;
+    color:#ffb000;
+    margin:4px 0 12px;
+}
+
+.impact-list{
+    list-style:none;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:16px;
+}
+
+.impact-list li{
+    color:#9fb2cc;
+    font-size:12.5px;
+    line-height:1.5;
+    padding-left:16px;
+    position:relative;
+}
+
+.impact-list li::before{
+    content:"•";
+    color:#ffb000;
+    position:absolute;
+    left:0;
+}
+
+.confidence-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:6px;
+}
+
+.confidence-row span{
+    color:#8fa0ba;
+    font-size:12px;
+}
+
+.confidence-row strong{
+    color:white;
+    font-size:13px;
+}
+
+.confidence-bar{
+    width:100%;
+    height:8px;
+    background:#1d3150;
+    border-radius:20px;
+    overflow:hidden;
+}
+
+.confidence-bar div{
+    height:100%;
+    background:linear-gradient(90deg,#00d4ff,#3ea6ff);
+    border-radius:20px;
+}
+
+/* fix / what to do instead */
+
+.fix-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.fix-item{
+    display:flex;
+    gap:12px;
+    align-items:flex-start;
+    background:#0c1a12;
+    border:1px solid #1f4a2e;
+    border-radius:14px;
+    padding:14px 16px;
+}
+
+.fix-item .check-icon{
+    color:#22e37d;
+    font-size:17px;
+    margin-top:1px;
+    flex-shrink:0;
+}
+
+.fix-item p{
+    color:#c3d3c8;
+    font-size:13.5px;
+    line-height:1.6;
+}
+
+/* footer actions */
+
+.receipt-actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    padding-top:6px;
+}
+
+.btn{
+    padding:12px 20px;
+    border-radius:12px;
+    font-size:13.5px;
+    font-weight:700;
+    cursor:pointer;
+    border:1px solid transparent;
+    transition:.2s;
+}
+
+.btn-primary{
+    background:#00d4ff;
+    color:#04121f;
+}
+
+.btn-primary:hover{
+    background:#33ddff;
+}
+
+.btn-outline{
+    background:transparent;
+    border:1px solid #223b5b;
+    color:#9fb2cc;
+}
+
+.btn-outline:hover{
+    border-color:#3ea6ff;
+    color:white;
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+
+@media(max-width:900px){
+    .two-col{
+        grid-template-columns:1fr;
+    }
+    .dpdp-grid{
+        grid-template-columns:1fr;
+    }
+    .receipt-meta{
+        text-align:left;
+    }
+}
+
+@media(max-width:600px){
+    .block-screen{
+        padding:16px;
+    }
+    .receipt-top, .receipt-body{
+        padding:20px;
+    }
+    .dpdp-banner{
+        margin:20px 20px 0;
+    }
+}
