@@ -1,0 +1,279 @@
+.dpdp-card{
+
+    background:#111d31;
+    border:1px solid #223b5b;
+    border-radius:20px;
+
+    padding:18px;
+
+    height:100%;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+
+}
+
+/* ===========================
+   HEADER
+=========================== */
+
+.dpdp-header{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    margin-bottom:8px;
+
+}
+
+.dpdp-header h2{
+
+    margin:0;
+
+    color:white;
+
+    font-size:24px;
+
+    font-weight:700;
+
+}
+
+.dpdp-header p{
+
+    margin-top:4px;
+
+    color:#8ea8cf;
+
+    font-size:12px;
+
+}
+
+.score-box{
+
+    width:58px;
+    height:58px;
+
+    border-radius:14px;
+
+    background:#162742;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    color:#00d4ff;
+
+    font-size:20px;
+    font-weight:700;
+
+    box-shadow:0 0 12px rgba(0,212,255,.15);
+
+}
+
+/* ===========================
+   CIRCLE
+=========================== */
+
+.progress-ring{
+
+    width:135px;
+    height:135px;
+
+    margin:8px auto;
+
+    position:relative;
+
+}
+
+.progress-ring svg{
+
+    width:135px;
+    height:135px;
+
+    transform:rotate(-90deg);
+
+}
+
+.track{
+
+    fill:none;
+
+    stroke:#243750;
+
+    stroke-width:8;
+
+}
+
+.progress{
+
+    fill:none;
+
+    stroke:#00d4ff;
+
+    stroke-width:8;
+
+    stroke-linecap:round;
+
+    stroke-dasharray:327;
+
+    stroke-dashoffset:20;
+
+}
+
+.ring-text{
+
+    position:absolute;
+
+    inset:0;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+
+}
+
+.ring-text h1{
+
+    margin:0;
+
+    color:white;
+
+    font-size:30px;
+
+    font-weight:700;
+
+}
+
+.ring-text span{
+
+    margin-top:2px;
+
+    color:#8ea8cf;
+
+    font-size:12px;
+
+}
+
+/* ===========================
+   LIST
+=========================== */
+
+.compliance-list{
+
+    margin-top:6px;
+
+}
+
+.compliance-item{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    padding:6px 0;
+
+    color:white;
+
+    font-size:14px;
+
+    border-bottom:1px solid rgba(255,255,255,.05);
+
+}
+
+.status{
+
+    display:inline-flex;
+
+    justify-content:center;
+    align-items:center;
+
+    width:22px;
+
+    margin-right:8px;
+
+    font-weight:700;
+
+}
+
+.success{
+
+    color:#19d66c;
+
+}
+
+.warning{
+
+    color:#ffb020;
+
+}
+
+/* ===========================
+   STATUS BOX
+=========================== */
+
+.overall-status{
+
+    margin-top:10px;
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    background:#162742;
+
+    border:1px solid #24486f;
+
+    border-radius:12px;
+
+    padding:10px 14px;
+
+}
+
+.overall-status span{
+
+    color:#8ea8cf;
+
+    font-size:13px;
+
+}
+
+.overall-status strong{
+
+    color:#19d66c;
+
+    font-size:13px;
+
+    letter-spacing:.5px;
+
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+
+@media(max-width:1000px){
+
+    .progress-ring{
+
+        width:120px;
+        height:120px;
+
+    }
+
+    .progress-ring svg{
+
+        width:120px;
+        height:120px;
+
+    }
+
+    .ring-text h1{
+
+        font-size:26px;
+
+    }
+
+}

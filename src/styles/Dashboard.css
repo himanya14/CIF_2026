@@ -1,0 +1,260 @@
+.dashboard{
+    padding:28px;
+    background:#081321;
+    min-height:100vh;
+}
+
+/* ===========================
+   Scanner
+=========================== */
+
+.scanner{
+    margin:25px 0;
+}
+
+.scanner span{
+    color:#00d4ff;
+    font-size:13px;
+    letter-spacing:2px;
+    font-weight:600;
+}
+
+.scan-line{
+    margin-top:10px;
+    height:3px;
+    background:#18314f;
+    border-radius:30px;
+    overflow:hidden;
+    position:relative;
+}
+
+.scan-dot{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:#00d4ff;
+    position:absolute;
+    top:50%;
+    transform:translateY(-50%);
+    animation:scan 3s linear infinite;
+    box-shadow:0 0 15px #00d4ff;
+}
+
+@keyframes scan{
+
+0%{
+left:-10px;
+}
+
+100%{
+left:100%;
+}
+
+}
+
+/* ===========================
+   KPI GRID
+=========================== */
+
+.kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:24px;
+}
+
+/* ===========================
+   CHARTS
+=========================== */
+
+.chart-grid{
+
+    display:grid;
+    grid-template-columns:2fr 1fr;
+
+    gap:28px;
+
+    margin-top:30px;
+
+}
+
+/* ===========================
+   MIDDLE
+=========================== */
+
+.middle-grid{
+
+    display:grid;
+    grid-template-columns:1fr 1fr;
+
+    gap:28px;
+
+    margin-top:30px;
+
+}
+
+/* ===========================
+   BOTTOM
+=========================== */
+
+.bottom-grid{
+
+    display:grid;
+    grid-template-columns:1fr 1fr;
+
+    gap:28px;
+
+    margin-top:30px;
+
+}
+
+/* ===========================
+   RISK CARD
+=========================== */
+
+.risk-card{
+
+    background:#111d31;
+
+    border:1px solid #223b5b;
+
+    border-radius:22px;
+
+    padding:28px;
+
+}
+
+.risk-card h2{
+
+    color:white;
+
+    margin-bottom:28px;
+
+    font-size:28px;
+
+}
+
+.risk-bars{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:22px;
+
+}
+
+.risk-row{
+
+    display:grid;
+
+    grid-template-columns:120px 1fr 40px;
+
+    align-items:center;
+
+    gap:16px;
+
+}
+
+.risk-row span{
+
+    color:white;
+
+}
+
+.progress{
+
+    width:100%;
+
+    height:10px;
+
+    background:#1d3150;
+
+    border-radius:20px;
+
+    overflow:hidden;
+
+}
+
+.progress div{
+
+    height:100%;
+
+    border-radius:20px;
+
+}
+
+.finance{
+    width:91%;
+    background:#ff4d4f;
+}
+
+.hr{
+    width:74%;
+    background:#ff8c42;
+}
+
+.it{
+    width:58%;
+    background:#ffc107;
+}
+
+.legal{
+    width:42%;
+    background:#42a5f5;
+}
+
+.ops{
+    width:34%;
+    background:#26c6da;
+}
+
+.marketing{
+    width:18%;
+    background:#4caf50;
+}
+
+.risk-row strong{
+
+    color:white;
+
+    text-align:right;
+
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+
+@media(max-width:1200px){
+
+.chart-grid,
+.middle-grid,
+.bottom-grid{
+
+grid-template-columns:1fr;
+
+}
+
+}
+
+@media(max-width:768px){
+
+.dashboard{
+
+padding:18px;
+
+}
+
+.kpi-grid{
+
+grid-template-columns:1fr;
+
+}
+
+.risk-row{
+
+grid-template-columns:90px 1fr 35px;
+
+}
+
+}

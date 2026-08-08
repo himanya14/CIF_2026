@@ -1,0 +1,76 @@
+.kpi-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:20px;
+    margin:30px 35px;
+}
+
+.kpi-card{
+    background:#132238;
+    border:1px solid #27486c;
+    border-radius:18px;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    min-height:150px;
+    transition:.3s;
+}
+
+.kpi-card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 12px 25px rgba(0,212,255,.12);
+}
+
+.kpi-top{
+    display:flex;
+    gap:16px;
+    align-items:center;
+}
+
+.kpi-icon{
+    width:56px;
+    height:56px;
+    border-radius:16px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:24px;
+    flex-shrink:0;
+}
+
+.kpi-info{
+    display:flex;
+    flex-direction:column;
+}
+
+.kpi-title{
+    color:#9fb2cc;
+    font-size:15px;
+    font-weight:500;
+}
+
+.kpi-value{
+    margin:6px 0 0;
+    font-size:42px;
+    font-weight:700;
+    line-height:1;
+}
+
+.kpi-bottom{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:18px;
+}
+
+.trend-up{
+    color:#22e37d;
+    font-weight:700;
+    font-size:14px;
+}
+
+.trend-text{
+    color:#7f95b2;
+    font-size:13px;
+}

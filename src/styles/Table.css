@@ -1,0 +1,97 @@
+.table-card{
+    background:#131f34;
+    border:1px solid #264b72;
+    border-radius:20px;
+    padding:26px;
+    margin-top:25px;
+    box-shadow:0 0 30px rgba(0,0,0,.25);
+}
+
+.table-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:20px;
+}
+
+.table-header h2{
+    color:#fff;
+    font-size:30px;
+    font-weight:700;
+    margin:0;
+}
+
+.view-all{
+    color:#2db8ff;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:600;
+    transition:.25s;
+}
+
+.view-all:hover{
+    color:white;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+thead tr{
+    border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+thead th{
+    color:#87a8d6;
+    font-size:15px;
+    font-weight:600;
+    padding:18px 0;
+    text-align:left;
+}
+
+tbody tr{
+    transition:.25s;
+}
+
+tbody tr:hover{
+    background:#1a2942;
+}
+
+tbody td{
+    color:#fff;
+    font-size:17px;
+    padding:20px 0;
+    border-bottom:1px solid rgba(255,255,255,.05);
+}
+
+.risk-badge{
+    display:inline-flex;
+    justify-content:center;
+    align-items:center;
+    min-width:85px;
+    padding:7px 18px;
+    border-radius:999px;
+    font-size:14px;
+    font-weight:700;
+}
+
+.high{
+    background:#4b1f27;
+    color:#ff5b5b;
+}
+
+.medium{
+    background:#4d3b13;
+    color:#ffbe3d;
+}
+
+.low{
+    background:#1d452c;
+    color:#59dd7d;
+}
+
+.minimal{
+    background:#143f4d;
+    color:#34d7ff;
+}
