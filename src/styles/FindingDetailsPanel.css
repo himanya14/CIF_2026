@@ -1,0 +1,391 @@
+.finding-panel-overlay {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(2, 9, 19, 0.7);
+  backdrop-filter: blur(5px);
+}
+
+.finding-details-panel {
+  width: min(520px, 100%);
+  height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid #285174;
+  background:
+    radial-gradient(
+      circle at 100% 0%,
+      rgba(0, 212, 255, 0.1),
+      transparent 30%
+    ),
+    #0c192c;
+  box-shadow: -22px 0 55px rgba(0, 0, 0, 0.4);
+  animation: finding-panel-enter 0.28s ease;
+}
+
+/* ==========================================
+   PANEL HEADER
+========================================== */
+
+.finding-panel-header {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 25px;
+  border-bottom: 1px solid #203c5a;
+  background: rgba(12, 25, 44, 0.95);
+  backdrop-filter: blur(12px);
+}
+
+.finding-panel-header p {
+  margin: 0 0 7px;
+  color: #00d4ff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.finding-panel-header h2 {
+  margin: 0;
+  color: #f7faff;
+  font-size: 1.45rem;
+}
+
+.finding-panel-header span {
+  display: block;
+  margin-top: 6px;
+  color: #82a5cf;
+}
+
+.finding-close-button {
+  display: grid;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #2a4d6f;
+  border-radius: 10px;
+  color: #a7bfdb;
+  background: #10233b;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.finding-close-button:hover {
+  color: #ffffff;
+  border-color: #00d4ff;
+  background: #15304e;
+}
+
+/* ==========================================
+   PANEL CONTENT
+========================================== */
+
+.finding-panel-content {
+  padding: 24px;
+}
+
+/* ==========================================
+   FINDING OVERVIEW
+========================================== */
+
+.finding-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.finding-overview > div,
+.finding-analysis-grid > div {
+  padding: 15px;
+  border: 1px solid #203d5c;
+  border-radius: 13px;
+  background: rgba(6, 18, 34, 0.65);
+}
+
+.finding-overview span,
+.finding-analysis-grid span,
+.finding-decisions span {
+  display: block;
+  margin-bottom: 7px;
+  color: #7899c2;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.finding-overview strong,
+.finding-analysis-grid strong,
+.finding-decisions strong {
+  color: #f4f8ff;
+}
+
+/* ==========================================
+   SEVERITY AND OUTCOME COLOURS
+========================================== */
+
+.finding-severity,
+.finding-outcome {
+  font-size: 0.82rem;
+}
+
+.finding-severity--critical,
+.finding-outcome--security-gap,
+.finding-outcome--false-positive {
+  color: #ff626c !important;
+}
+
+.finding-severity--high {
+  color: #f4b740 !important;
+}
+
+.finding-severity--medium {
+  color: #00d4ff !important;
+}
+
+.finding-severity--low,
+.finding-outcome--protected,
+.finding-outcome--correctly-allowed {
+  color: #22e37d !important;
+}
+
+.finding-outcome--not-run {
+  color: #8ca9cb !important;
+}
+
+/* ==========================================
+   INFORMATION SECTIONS
+========================================== */
+
+.finding-section {
+  margin-top: 22px;
+}
+
+.finding-section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 11px;
+  color: #00d4ff;
+}
+
+.finding-section-title h3,
+.finding-section > h3 {
+  margin: 0;
+  color: #dfeaff;
+  font-size: 0.9rem;
+}
+
+.finding-prompt,
+.finding-reason {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid #203d5c;
+  border-radius: 13px;
+  color: #acc4e1;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  background: #071526;
+}
+
+/* ==========================================
+   DECISION COMPARISON
+========================================== */
+
+.finding-decisions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.finding-decisions > div {
+  min-width: 0;
+  padding: 15px;
+  border: 1px solid #203d5c;
+  border-radius: 13px;
+  background: #071526;
+}
+
+/* ==========================================
+   SECURITY ANALYSIS
+========================================== */
+
+.finding-analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.finding-analysis-grid > div {
+  min-width: 0;
+}
+
+.finding-analysis-grid strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================
+   DETECTED ITEMS
+========================================== */
+
+.detected-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.detected-items span {
+  padding: 8px 11px;
+  border: 1px solid rgba(255, 82, 82, 0.3);
+  border-radius: 999px;
+  color: #ff747d;
+  background: rgba(255, 82, 82, 0.1);
+  font-size: 0.78rem;
+}
+
+.detected-items p {
+  margin: 0;
+  color: #7899c2;
+}
+
+/* ==========================================
+   REVIEWER ACTION FOOTER
+========================================== */
+
+.finding-panel-footer {
+  position: sticky;
+  z-index: 2;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 24px;
+  border-top: 1px solid #203d5c;
+  background: rgba(12, 25, 44, 0.96);
+  backdrop-filter: blur(12px);
+}
+
+.finding-panel-footer > div {
+  min-width: 0;
+}
+
+.finding-panel-footer > div > span {
+  color: #dce9fa;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.finding-panel-footer p {
+  margin: 5px 0 0;
+  color: #7899c2;
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.mark-reviewed-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 9px;
+  min-height: 43px;
+  padding: 0 17px;
+  border: 1px solid rgba(34, 227, 125, 0.4);
+  border-radius: 11px;
+  color: #22e37d;
+  background: rgba(34, 227, 125, 0.12);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.mark-reviewed-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(34, 227, 125, 0.7);
+  background: rgba(34, 227, 125, 0.2);
+}
+
+.mark-reviewed-button:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+/* ==========================================
+   PANEL ANIMATION
+========================================== */
+
+@keyframes finding-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(45px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ==========================================
+   MOBILE RESPONSIVENESS
+========================================== */
+
+@media (max-width: 560px) {
+  .finding-details-panel {
+    width: 100%;
+    border-left: none;
+  }
+
+  .finding-panel-header,
+  .finding-panel-content {
+    padding: 20px;
+  }
+
+  .finding-panel-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .finding-overview,
+  .finding-decisions,
+  .finding-analysis-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .finding-panel-footer {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 16px 20px;
+  }
+
+  .mark-reviewed-button {
+    width: 100%;
+  }
+}
+
+/* ==========================================
+   REDUCED MOTION ACCESSIBILITY
+========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .finding-details-panel {
+    animation: none;
+  }
+
+  .finding-close-button,
+  .mark-reviewed-button {
+    transition: none;
+  }
+}

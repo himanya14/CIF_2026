@@ -1,0 +1,130 @@
+.simulation-progress {
+  margin-top: 26px;
+  padding: 20px 24px;
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      110deg,
+      rgba(0, 212, 255, 0.08),
+      rgba(17, 31, 53, 0.96) 42%
+    );
+  box-shadow:
+    0 16px 35px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.simulation-progress-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.simulation-progress-current {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 13px;
+}
+
+.simulation-progress-icon {
+  display: grid;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 13px;
+  color: #00d4ff;
+  background: rgba(0, 212, 255, 0.13);
+}
+
+.simulation-progress-icon svg {
+  animation: simulation-spinner 1.1s linear infinite;
+}
+
+.simulation-progress-current div:last-child {
+  min-width: 0;
+}
+
+.simulation-progress-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #00d4ff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.simulation-progress-current strong {
+  display: block;
+  overflow: hidden;
+  color: #f4f8ff;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simulation-progress-status {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  color: #89a8ce;
+  font-size: 0.86rem;
+}
+
+.simulation-progress-status svg {
+  color: #22e37d;
+}
+
+.simulation-progress-status strong {
+  min-width: 42px;
+  color: #00d4ff;
+  font-size: 1rem;
+  text-align: right;
+}
+
+.simulation-progress-track {
+  height: 9px;
+  margin-top: 17px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #071426;
+}
+
+.simulation-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    #148cff,
+    #00d4ff,
+    #22e37d
+  );
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.5);
+  transition: width 0.4s ease;
+}
+
+@keyframes simulation-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 700px) {
+  .simulation-progress {
+    padding: 18px;
+  }
+
+  .simulation-progress-top {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .simulation-progress-status {
+    justify-content: space-between;
+    width: 100%;
+  }
+}
