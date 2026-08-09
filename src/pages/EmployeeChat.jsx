@@ -1,7 +1,12 @@
 import EmployeeChatComponent from "../components/EmployeeChat/EmployeeChat";
 
-function EmployeeChat() {
-  return <EmployeeChatComponent />;
+function EmployeeChat({ onOpenBlockScreen, onBack }) {
+  return (
+    <EmployeeChatComponent
+      onOpenBlockScreen={onOpenBlockScreen}
+      onBack={onBack}
+    />
+  );
 }
 
 export default EmployeeChat;
