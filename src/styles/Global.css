@@ -34,6 +34,6 @@
   background: #ff5252;
 }
 
-.Toastify__progress-bar--info {
-  background: #00d4ff;
+::selection {
+  background: #00d4ff44;
 }
