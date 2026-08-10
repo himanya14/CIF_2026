@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "../../styles/BlockScreen.css";
-import blockScenarios from "../../data/blockScenarios";
+import { getIncidents, updateIncident } from "../../services/api";
 
 import {
   FaShieldAlt,
@@ -24,10 +24,22 @@ const ICONS = {
   "honeytoken": <FaFingerprint />,
 };
 function BlockScreen({ onBack, selectedScenarioId }) {
-  const [activeId, setActiveId] = useState(
-    selectedScenarioId || blockScenarios[0].id
-  );
-  const active = blockScenarios.find((s) => s.id === activeId);
+  const [scenarios, setScenarios] = useState([]);
+  const [activeId, setActiveId] = useState(selectedScenarioId || null);
+  const active = scenarios.find((s) => s.id === activeId) || scenarios[0] || null;
+
+  useEffect(() => {
+    getIncidents().then(data => {
+      setScenarios(data.incidents);
+      setActiveId(current => current || data.incidents[0]?.id || null);
+    }).catch(error => console.warn("Incident API unavailable", error));
+  }, []);
+
+  const reviewIncident = async (action) => {
+    if (!active) return;
+    const result = await updateIncident(active.id, action);
+    setScenarios(current => current.map(item => item.id === active.id ? { ...item, reviewStatus: result.reviewStatus } : item));
+  };
 
   return (
     <div className="block-screen">
@@ -45,7 +57,7 @@ function BlockScreen({ onBack, selectedScenarioId }) {
       </div>
 
       <div className="scenario-tabs">
-        {blockScenarios.map((s) => (
+        {scenarios.map((s) => (
           <button
             key={s.id}
             className={`scenario-tab ${activeId === s.id ? "active" : ""}`}
@@ -53,18 +65,22 @@ function BlockScreen({ onBack, selectedScenarioId }) {
             onClick={() => setActiveId(s.id)}
           >
             <span className="dot" style={{ background: s.color }}></span>
-            {ICONS[s.id]}
+            {ICONS[s.scenarioKey] || <FaShieldAlt />}
             {s.tag}
           </button>
         ))}
       </div>
 
-      <ReceiptCard scenario={active} />
+      {active ? (
+        <ReceiptCard scenario={active} onReview={reviewIncident} />
+      ) : (
+        <div className="receipt-card"><div className="receipt-body"><h2>No incidents recorded</h2><p>Submit a risky prompt in Employee Chat to create a live database incident.</p></div></div>
+      )}
     </div>
   );
 }
 
-function ReceiptCard({ scenario }) {
+function ReceiptCard({ scenario, onReview }) {
   const honey = !!scenario.isHoneytoken;
 
   return (
@@ -205,8 +221,8 @@ function ReceiptCard({ scenario }) {
 
         {/* ACTIONS */}
         <div className="receipt-actions">
-          <button className="btn btn-primary">Acknowledge &amp; Continue</button>
-          <button className="btn btn-outline">Report False Positive</button>
+          <button className="btn btn-primary" onClick={() => onReview("acknowledge")}>Acknowledge &amp; Continue</button>
+          <button className="btn btn-outline" onClick={() => onReview("false-positive")}>Report False Positive</button>
           <button className="btn btn-outline">View Full Policy →</button>
         </div>
       </div>

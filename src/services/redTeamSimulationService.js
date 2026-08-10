@@ -1,3 +1,5 @@
+import { apiRequest } from "./api";
+
 const SIMULATION_DELAY = 700;
 
 const mockResponses = {
@@ -155,6 +157,15 @@ export async function runRedTeamTest(
   test,
   simulationRunId
 ) {
+  try {
+    return await apiRequest("/red-team/test", {
+      method: "POST",
+      body: JSON.stringify({ test, simulationRunId }),
+    });
+  } catch (error) {
+    console.warn("Backend unavailable; using local simulation fallback.", error);
+  }
+
   await wait(SIMULATION_DELAY);
 
   const configuredResponse =

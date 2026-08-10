@@ -122,11 +122,7 @@ const handleRunSimulation = async () => {
   );
 
   try {
-    for (
-      let index = 0;
-      index < redTeamTests.length;
-      index += 1
-    ) {
+    for (let index = 0;index < redTeamTests.length;index += 1) {
       const test = redTeamTests[index];
 
       setCurrentTestIndex(index);
@@ -255,16 +251,10 @@ const handleMarkAsReviewed = (testId) => {
 
   return (
     <div className="red-team-page">
-      {/* ======================================
-          COMMON NAVBAR
-      ====================================== */}
 
       <Navbar />
 
       <main className="red-team-content">
-        {/* ======================================
-            PAGE HEADER
-        ====================================== */}
 
         <section className="red-team-header">
           <div className="red-team-header-left">
@@ -312,9 +302,6 @@ const handleMarkAsReviewed = (testId) => {
           </div>
         </section>
 
-        {/* ======================================
-            SIMULATION STATISTICS
-        ====================================== */}
 
         <section className="red-team-stats-section">
           {simulationStats.map((stat) => (
@@ -328,10 +315,6 @@ const handleMarkAsReviewed = (testId) => {
             />
           ))}
         </section>
-
-        {/* ======================================
-            LIVE SIMULATION PROGRESS
-        ====================================== */}
 
         {isRunning && (
           <SimulationProgress

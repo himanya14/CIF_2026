@@ -1,14 +1,11 @@
 import "../styles/Table.css";
 
-const departments = [
-  { department: "Finance", risk: "High", score: 91 },
-  { department: "HR", risk: "Medium", score: 74 },
-  { department: "IT", risk: "Medium", score: 58 },
-  { department: "Legal", risk: "Low", score: 42 },
-  { department: "Operations", risk: "Low", score: 34 },
-];
-
-function DepartmentTable() {
+function DepartmentTable({ liveData = [] }) {
+  const displayedDepartments = liveData.map(item => ({
+    department: item.department,
+    score: Number(item.score || 0),
+    risk: Number(item.score || 0) >= 75 ? "High" : Number(item.score || 0) >= 45 ? "Medium" : "Low",
+  }));
   return (
     <div className="table-card">
 
@@ -35,7 +32,7 @@ function DepartmentTable() {
 
         <tbody>
 
-          {departments.map((dept, index) => (
+          {displayedDepartments.map((dept, index) => (
 
             <tr key={index}>
 

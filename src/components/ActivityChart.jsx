@@ -58,11 +58,12 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-function ActivityChart() {
+function ActivityChart({ liveData = [] }) {
   const [period, setPeriod] = useState("24H");
 
-  const data =
-    period === "24H"
+  const data = liveData.length > 0
+    ? liveData
+    : period === "24H"
       ? hourlyData
       : period === "7D"
       ? weeklyData

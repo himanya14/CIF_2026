@@ -1,20 +1,18 @@
 import { useState } from "react";
 import ChatMessage from "./ChatMessage";
-import { chatScenarios } from "../../data/chatData";
+import { inspectPrompt } from "../../services/api";
 import "../../styles/EmployeeChat.css";
 
-function EmployeeChat({ onOpenBlockScreen, onBack }) {
+function EmployeeChat({ onOpenBlockScreen }) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
 
-  const handleSend = () => {
+  const [isInspecting, setIsInspecting] = useState(false);
+
+  const handleSend = async () => {
     if (!input.trim()) return;
 
     const userMessage = input.trim();
-
-    const scenario = chatScenarios.find((item) =>
-      userMessage.toLowerCase().includes(item.trigger)
-    );
 
     setMessages((prev) => [
       ...prev,
@@ -25,47 +23,28 @@ function EmployeeChat({ onOpenBlockScreen, onBack }) {
       },
     ]);
 
-    setTimeout(() => {
-      let sanitizedText = null;
-
-      // Aadhaar sanitization
-      if (scenario?.blockScenarioId === "aadhaar") {
-        sanitizedText = userMessage.replace(
-          /\b\d{4}\s?\d{4}\s?\d{4}\b/g,
-          "[AADHAAR REDACTED]"
-        );
-      }
-
-      // PAN sanitization
-      if (scenario?.blockScenarioId === "pan-consent") {
-        sanitizedText = userMessage.replace(
-          /\b[A-Z]{5}[0-9]{4}[A-Z]\b/gi,
-          "[PAN REDACTED]"
-        );
-      }
-
+    setInput("");
+    setIsInspecting(true);
+    try {
+      const scenario = await inspectPrompt(userMessage);
       setMessages((prev) => [
         ...prev,
         {
           id: Date.now() + 1,
-          text:
-            scenario?.response ||
-            "Your request was processed successfully.",
+          text: scenario.response,
           isUser: false,
-          status: scenario?.status || "allowed",
-          label: scenario?.label || "Allowed",
-          blockScenarioId: scenario?.blockScenarioId || null,
-          originalText:
-            scenario?.status === "cleaned" ? userMessage : null,
-          sanitizedText:
-            scenario?.status === "cleaned"
-              ? sanitizedText
-              : null,
+          status: scenario.status,
+          label: scenario.label,
+          blockScenarioId: scenario.blockScenarioId,
+          originalText: scenario.originalText,
+          sanitizedText: scenario.sanitizedText,
         },
       ]);
-    }, 500);
-
-    setInput("");
+    } catch (error) {
+      setMessages((prev) => [...prev, { id: Date.now() + 1, text: `Security service error: ${error.message}`, isUser: false, status: "warning", label: "Service unavailable" }]);
+    } finally {
+      setIsInspecting(false);
+    }
   };
 
   const handleKeyDown = (event) => {
@@ -202,7 +181,9 @@ function EmployeeChat({ onOpenBlockScreen, onBack }) {
           onKeyDown={handleKeyDown}
         />
 
-        <button onClick={handleSend}>Send</button>
+        <button onClick={handleSend} disabled={isInspecting}>
+          {isInspecting ? "Inspecting..." : "Send"}
+        </button>
       </div>
     </div>
   );

@@ -33,7 +33,11 @@ const violations = [
   },
 ];
 
-function ViolationChart() {
+function ViolationChart({ liveData = [], total = 0 }) {
+  const displayedViolations = liveData.map((item, index) => ({
+    ...item,
+    color: violations[index % violations.length].color,
+  }));
   return (
     <div className="violation-card">
 
@@ -44,7 +48,7 @@ function ViolationChart() {
         <div className="donut-chart">
 
           <div className="donut-center">
-            <h1>247</h1>
+            <h1>{total}</h1>
             <span>Total</span>
           </div>
 
@@ -52,7 +56,7 @@ function ViolationChart() {
 
         <div className="legend">
 
-          {violations.map((item, index) => (
+          {displayedViolations.map((item, index) => (
 
             <div className="legend-item" key={index}>
 

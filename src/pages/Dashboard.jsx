@@ -1,4 +1,6 @@
 import "../styles/Dashboard.css";
+import { useEffect, useState } from "react";
+import { getDashboard } from "../services/api";
 
 import Navbar from "../components/Navbar";
 
@@ -20,6 +22,17 @@ import {
 } from "react-icons/fa";
 
 function Dashboard() {
+  const [liveData, setLiveData] = useState({
+    kpis: { scanned: 0, blocked: 0, sanitized: 0, securityScore: 100, riskPrevented: "₹0.0L" },
+    activity: [], categories: [], departments: [],
+  });
+
+  useEffect(() => {
+    const loadDashboard = () => getDashboard().then(setLiveData).catch(error => console.warn("Dashboard API unavailable", error));
+    loadDashboard();
+    const timer = setInterval(loadDashboard, 3000);
+    return () => clearInterval(timer);
+  }, []);
   return (
     <div className="dashboard">
 
@@ -43,40 +56,40 @@ function Dashboard() {
 
         <KPICard
           title="Prompts Scanned"
-          value="247"
-          trend="+18.6%"
+          value={liveData.kpis.scanned}
+          trend="Live"
           icon={<FaUserShield />}
           color="#3ea6ff"
         />
 
         <KPICard
           title="Blocked Prompts"
-          value="12"
-          trend="-8.3%"
+          value={liveData.kpis.blocked}
+          trend="Live"
           icon={<FaBug />}
           color="#ff5252"
         />
 
         <KPICard
           title="Sanitized"
-          value="31"
-          trend="+15.2%"
+          value={liveData.kpis.sanitized}
+          trend="Live"
           icon={<FaLock />}
           color="#14e6ff"
         />
 
         <KPICard
           title="Security Score"
-          value="92"
-          trend="+4 pts"
+          value={liveData.kpis.securityScore}
+          trend="Live"
           icon={<FaShieldAlt />}
           color="#a855f7"
         />
 
         <KPICard
           title="Risk Prevented"
-          value="₹1.8L"
-          trend="+24%"
+          value={liveData.kpis.riskPrevented}
+          trend="Calculated"
           icon={<FaRupeeSign />}
           color="#ffb000"
         />
@@ -87,9 +100,9 @@ function Dashboard() {
 
       <div className="chart-grid">
 
-        <ActivityChart />
+        <ActivityChart liveData={liveData.activity} />
 
-        <ViolationChart />
+        <ViolationChart liveData={liveData.categories} total={liveData.kpis.scanned} />
 
       </div>
 
@@ -169,7 +182,7 @@ function Dashboard() {
 
       </div>
 
-      <DepartmentTable />
+      <DepartmentTable liveData={liveData.departments} />
 
       <Footer />
 
