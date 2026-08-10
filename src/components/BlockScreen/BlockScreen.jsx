@@ -23,9 +23,10 @@ const ICONS = {
   "card-data": <FaCreditCard />,
   "honeytoken": <FaFingerprint />,
 };
-
-function BlockScreen({ onBack }) {
-  const [activeId, setActiveId] = useState(blockScenarios[0].id);
+function BlockScreen({ onBack, selectedScenarioId }) {
+  const [activeId, setActiveId] = useState(
+    selectedScenarioId || blockScenarios[0].id
+  );
   const active = blockScenarios.find((s) => s.id === activeId);
 
   return (
