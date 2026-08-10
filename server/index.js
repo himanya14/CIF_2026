@@ -31,12 +31,46 @@ function classify(prompt) {
     { department: "Marketing", re: /\b(campaign|marketing|advertisement|customer list|lead list|social media|brand|promotion|seo)\b/i },
   ];
   const detectedDepartment = departmentRules.find(item => item.re.test(prompt))?.department || "General";
+  const containsAadhaar = /(?:aadhaar|aadhar)[^\d]{0,24}\d{4}\s?\d{4}\s?\d{4}/i.test(prompt);
+  const containsPan = /\b[A-Z]{5}\d{4}[A-Z]\b/i.test(prompt);
+  const containsPhone = /(?:\+91[\s-]?)?[6-9]\d{9}\b/.test(prompt);
+  const containsEmail = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(prompt);
+
+  if (containsAadhaar || containsPan || containsPhone || containsEmail) {
+    const detectedItems = [
+      containsAadhaar && "Aadhaar Number",
+      containsPan && "PAN Number",
+      containsPhone && "Phone Number",
+      containsEmail && "Email Address",
+    ].filter(Boolean);
+    const category = detectedItems.length > 1
+      ? "Sensitive Personal Data"
+      : containsPan
+        ? "Financial Identity"
+        : containsAadhaar
+          ? "Personal Identity"
+          : "Personal Contact Data";
+    return {
+      department: containsAadhaar ? "HR" : containsPan ? "Finance" : detectedDepartment === "General" ? "HR" : detectedDepartment,
+      status: "cleaned",
+      category,
+      riskScore: containsAadhaar || containsPan ? 94 : 82,
+      confidence: 99,
+      policy: "Multi-field Personal Data Protection",
+      scenarioKey: containsPan && !containsAadhaar ? "pan-consent" : "aadhaar",
+      label: "Cleaned Up",
+      response: `${detectedItems.join(", ")} ${detectedItems.length === 1 ? "was" : "were"} removed before processing.`,
+      sanitize: value => value
+        .replace(/\b\d{4}\s?\d{4}\s?\d{4}\b/g, "[AADHAAR REDACTED]")
+        .replace(/\b[A-Z]{5}\d{4}[A-Z]\b/gi, "[PAN REDACTED]")
+        .replace(/(?:\+91[\s-]?)?[6-9]\d{9}\b/g, "[PHONE REDACTED]")
+        .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[EMAIL REDACTED]"),
+    };
+  }
   const rules = [
     { re: /honeytoken|sk-honeypot|AWS_TEST_SECRET_001/i, department: "IT", status: "blocked", category: "Honeytoken", riskScore: 100, confidence: 100, policy: "Honeytoken Intrusion Detection", scenarioKey: "honeytoken", label: "Blocked", response: "A decoy credential was triggered; this session has been flagged." },
     { re: /(?:card|visa|mastercard|cvv)[\s\S]{0,60}(?:\d[ -]*?){3,16}|\b(?:\d[ -]*?){13,19}\b[\s\S]{0,30}\bcvv\b/i, department: "Finance", status: "blocked", category: "Financial Data", riskScore: 99, confidence: 99.9, policy: "PCI Cardholder Data Protection", scenarioKey: "card-data", label: "Blocked", response: "Payment-card information was detected and the request was blocked." },
-    { re: /\b[A-Z]{5}\d{4}[A-Z]\b/i, department: "Finance", status: "cleaned", category: "Financial Identity", riskScore: 88, confidence: 96, policy: "PAN Protection", scenarioKey: "pan-consent", label: "Cleaned Up", response: "PAN information was removed before processing.", sanitize: value => value.replace(/\b[A-Z]{5}\d{4}[A-Z]\b/gi, "[PAN REDACTED]") },
     { re: /sk-[\w-]{8,}|AKIA[A-Z0-9]{12,}|gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,}|xox[baprs]-[A-Za-z0-9-]{8,}|AIza[A-Za-z0-9_-]{20,}|sk_(?:live|test)_[A-Za-z0-9]{8,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|(?:postgres|mysql|mongodb(?:\+srv)?):\/\/[^\s:]+:[^\s@]+@|api[ _-]?key\s*(?:[:=]|is)\s*\S+|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/i, department: "IT", status: "blocked", category: "Credentials", riskScore: 99, confidence: 98, policy: "Credential Leakage Prevention", scenarioKey: "api-key", label: "Blocked", response: "A sensitive technical credential or access token was detected and the request was blocked." },
-    { re: /(?:aadhaar|aadhar)[^\d]{0,24}\d{4}\s?\d{4}\s?\d{4}|\b\d{4}\s\d{4}\s\d{4}\b/i, department: "HR", status: "cleaned", category: "Personal Identity", riskScore: 94, confidence: 99, policy: "Government ID Masking", scenarioKey: "aadhaar", label: "Cleaned Up", response: "Sensitive Aadhaar information was removed before processing.", sanitize: value => value.replace(/\b\d{4}\s?\d{4}\s?\d{4}\b/g, "[AADHAAR REDACTED]") },
     { re: /ignore (?:all|the) previous|reveal (?:the )?(?:system|confidential)|developer mode|jailbreak/i, department: "IT", status: "blocked", category: "Prompt Injection", riskScore: 95, confidence: 94, policy: "Prompt Injection Defence", scenarioKey: "prompt-injection", label: "Blocked", response: "A prompt-injection attempt was detected and blocked." },
     { re: /password\s*(?:[:=]|is)\s*\S+|(?:username|user)\s*[:=]\s*\S+[\s\S]{0,40}password\s*(?:[:=]|is)\s*\S+/i, department: "IT", status: "blocked", category: "Credentials", riskScore: 97, confidence: 96, policy: "Database Credential Protection", scenarioKey: "api-key", label: "Blocked", response: "A password value was detected and the request was blocked." },
   ];
