@@ -1,0 +1,486 @@
+/* ==========================================
+   RED TEAM PAGE
+========================================== */
+
+.red-team-page {
+    min-height: 100vh;
+    background: #081321;
+    color: white;
+}
+
+
+/* ==========================================
+   MAIN CONTENT
+========================================== */
+
+.red-team-content {
+    padding: 28px;
+}
+
+
+/* ==========================================
+   RED TEAM HEADER / HERO
+========================================== */
+
+.red-team-header {
+    position: relative;
+
+    min-height: 190px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 40px;
+
+    padding: 32px 36px;
+
+    background:
+        radial-gradient(
+            circle at 85% 20%,
+            rgba(0, 212, 255, 0.12),
+            transparent 30%
+        ),
+        linear-gradient(
+            135deg,
+            #101e33,
+            #0d192b
+        );
+
+    border: 1px solid #223b5b;
+    border-radius: 22px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 12px 35px rgba(0, 0, 0, 0.18);
+}
+
+
+/* Cyan decorative line */
+
+.red-team-header::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 36px;
+    right: 36px;
+
+    height: 2px;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        #00d4ff,
+        transparent
+    );
+
+    opacity: 0.7;
+}
+
+
+/* ==========================================
+   LEFT SIDE
+========================================== */
+
+.red-team-header-left {
+    position: relative;
+    z-index: 1;
+
+    max-width: 760px;
+}
+
+
+/* ==========================================
+   SECURITY LABEL
+========================================== */
+
+.red-team-label {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+
+    margin-bottom: 10px;
+
+    color: #00d4ff;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    letter-spacing: 2px;
+}
+
+.red-team-label svg {
+    font-size: 16px;
+
+    filter:
+        drop-shadow(
+            0 0 7px rgba(0, 212, 255, 0.65)
+        );
+}
+
+
+/* ==========================================
+   MAIN TITLE
+========================================== */
+
+.red-team-header h1 {
+    margin: 0;
+
+    color: #ffffff;
+
+    font-size: clamp(32px, 4vw, 46px);
+    font-weight: 700;
+
+    line-height: 1.15;
+}
+
+
+/* ==========================================
+   DESCRIPTION
+========================================== */
+
+.red-team-description {
+    max-width: 720px;
+
+    margin-top: 13px;
+
+    color: #9fb2cc;
+
+    font-size: 15px;
+
+    line-height: 1.7;
+}
+
+
+/* ==========================================
+   RIGHT SIDE
+========================================== */
+
+.red-team-header-right {
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+    align-items: center;
+
+    flex-shrink: 0;
+}
+
+
+/* ==========================================
+   RUN SIMULATION BUTTON
+========================================== */
+
+.run-simulation-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    padding: 13px 22px;
+
+    border: 1px solid #2b5c89;
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #12304e,
+            #174c6b
+        );
+
+    color: #e8f7ff;
+
+    font-size: 14px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.25s ease,
+        border-color 0.25s ease,
+        box-shadow 0.25s ease,
+        background 0.25s ease;
+}
+
+
+/* Play icon */
+
+.run-simulation-btn svg {
+    color: #00d4ff;
+
+    font-size: 13px;
+
+    transition: transform 0.25s ease;
+}
+
+
+/* Hover */
+
+.run-simulation-btn:hover {
+    transform: translateY(-2px);
+
+    border-color: #00d4ff;
+
+    background:
+        linear-gradient(
+            135deg,
+            #163d60,
+            #1b5879
+        );
+
+    box-shadow:
+        0 0 12px rgba(0, 212, 255, 0.25),
+        0 8px 25px rgba(0, 0, 0, 0.25);
+}
+
+
+.run-simulation-btn:hover svg {
+    transform: translateX(2px);
+}
+
+
+/* Click */
+
+.run-simulation-btn:active {
+    transform: scale(0.98);
+}
+
+
+/* Keyboard accessibility */
+
+.run-simulation-btn:focus-visible {
+    outline: 2px solid #00d4ff;
+    outline-offset: 4px;
+}
+
+
+/* ==========================================
+   FUTURE SECTIONS
+========================================== */
+
+.red-team-stats-section {
+    margin-top: 28px;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 20px;
+}
+
+
+.red-team-workspace {
+    margin-top: 28px;
+
+    display: grid;
+
+    grid-template-columns: minmax(0, 1fr);
+
+    gap: 28px;
+}
+.run-simulation-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.red-team-content {
+  width: 100%;
+  max-width: 1920px;
+  margin: 0 auto;
+  padding: 42px 34px 60px;
+}
+.red-team-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  width: 100%;
+}
+
+.red-team-header-left {
+  min-width: 0;
+  max-width: 1100px;
+}
+
+.red-team-header-right {
+  flex-shrink: 0;
+}
+
+.red-team-stats-section {
+  display: grid;
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+  gap: 22px;
+  margin-top: 30px;
+}
+.red-team-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  margin-top: 28px;
+}
+@media (max-width: 1000px) {
+
+    .red-team-header {
+        align-items: flex-start;
+    }
+
+    .red-team-workspace {
+        grid-template-columns: 1fr;
+    }
+
+}
+@media (max-width: 1100px) {
+
+    .red-team-stats-section {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .red-team-stats-section {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+/* ==========================================
+   RESPONSIVE - MOBILE
+========================================== */
+
+@media (max-width: 768px) {
+
+    .red-team-content {
+        padding: 18px;
+    }
+
+
+    .red-team-header {
+        min-height: auto;
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+        gap: 25px;
+
+        padding: 26px 22px;
+    }
+
+
+    .red-team-header::before {
+        left: 22px;
+        right: 22px;
+    }
+
+
+    .red-team-description {
+        font-size: 14px;
+    }
+
+
+    .red-team-header-right {
+        width: 100%;
+    }
+
+
+    .run-simulation-btn {
+        width: 100%;
+    }
+
+}
+
+
+/* ==========================================
+   VERY SMALL MOBILE
+========================================== */
+
+@media (max-width: 480px) {
+
+    .red-team-content {
+        padding: 14px;
+    }
+
+
+    .red-team-header {
+        padding: 22px 18px;
+
+        border-radius: 16px;
+    }
+
+
+    .red-team-label {
+        font-size: 10px;
+
+        letter-spacing: 1.5px;
+    }
+
+}
+@media (max-width: 1100px) {
+  .red-team-content {
+    padding: 32px 24px 50px;
+  }
+
+  .red-team-header {
+    align-items: flex-start;
+  }
+
+  .red-team-stats-section {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .red-team-content {
+    padding: 22px 15px 40px;
+  }
+
+  .red-team-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px 20px;
+    border-radius: 18px;
+  }
+
+  .red-team-header h1 {
+    font-size: clamp(2rem, 10vw, 3rem);
+    line-height: 1.05;
+  }
+
+  .red-team-description {
+    font-size: 0.95rem;
+    line-height: 1.65;
+  }
+
+  .red-team-header-right {
+    width: 100%;
+  }
+
+  .run-simulation-btn {
+    justify-content: center;
+    width: 100%;
+  }
+
+  .red-team-stats-section {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 20px;
+  }
+
+  .red-team-workspace {
+    margin-top: 20px;
+  }
+}
