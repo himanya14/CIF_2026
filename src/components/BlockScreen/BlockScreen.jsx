@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "../../styles/BlockScreen.css";
 import { getIncidents, updateIncident } from "../../services/api";
 
@@ -15,25 +15,47 @@ import {
   FaGavel,
 } from "react-icons/fa";
 
-// pick an icon per scenario id, purely cosmetic
-const ICONS = {
-  "api-key": <FaKey />,
-  "aadhaar": <FaIdCard />,
-  "pan-consent": <FaRupeeSign />,
-  "card-data": <FaCreditCard />,
-  "honeytoken": <FaFingerprint />,
+const GROUPS = {
+  Credentials: { icon: <FaKey />, color: "#ff5252" },
+  Finance: { icon: <FaCreditCard />, color: "#ff8c42" },
+  PII: { icon: <FaIdCard />, color: "#a855f7" },
+  Honeytoken: { icon: <FaFingerprint />, color: "#ffb000" },
+  "AI Security": { icon: <FaShieldAlt />, color: "#00d4ff" },
+  Other: { icon: <FaRupeeSign />, color: "#8ea8cf" },
 };
+
+function getIncidentGroup(incident) {
+  if (incident.scenarioKey === "honeytoken" || incident.category === "Honeytoken") return "Honeytoken";
+  if (incident.scenarioKey === "api-key" || incident.category === "Credentials") return "Credentials";
+  if (incident.department === "Finance" || /financial|card|pan|payment/i.test(incident.category || "")) return "Finance";
+  if (incident.department === "HR" || /identity|pii|aadhaar/i.test(incident.category || "")) return "PII";
+  if (/prompt injection|ai attack/i.test(incident.category || "")) return "AI Security";
+  return "Other";
+}
+
 function BlockScreen({ onBack, selectedScenarioId }) {
   const [scenarios, setScenarios] = useState([]);
   const [activeId, setActiveId] = useState(selectedScenarioId || null);
+  const [activeGroup, setActiveGroup] = useState(null);
   const active = scenarios.find((s) => s.id === activeId) || scenarios[0] || null;
+
+  const groupedScenarios = useMemo(() => scenarios.reduce((groups, incident) => {
+    const group = getIncidentGroup(incident);
+    if (!groups[group]) groups[group] = [];
+    groups[group].push(incident);
+    return groups;
+  }, {}), [scenarios]);
+
+  const visibleIncidents = activeGroup ? groupedScenarios[activeGroup] || [] : [];
 
   useEffect(() => {
     getIncidents().then(data => {
       setScenarios(data.incidents);
-      setActiveId(current => current || data.incidents[0]?.id || null);
+      const selected = data.incidents.find(item => item.id === selectedScenarioId) || data.incidents[0];
+      setActiveId(selected?.id || null);
+      setActiveGroup(selected ? getIncidentGroup(selected) : null);
     }).catch(error => console.warn("Incident API unavailable", error));
-  }, []);
+  }, [selectedScenarioId]);
 
   const reviewIncident = async (action) => {
     if (!active) return;
@@ -57,19 +79,41 @@ function BlockScreen({ onBack, selectedScenarioId }) {
       </div>
 
       <div className="scenario-tabs">
-        {scenarios.map((s) => (
+        {Object.entries(groupedScenarios).map(([group, incidents]) => (
           <button
-            key={s.id}
-            className={`scenario-tab ${activeId === s.id ? "active" : ""}`}
-            style={{ "--tab-color": s.color }}
-            onClick={() => setActiveId(s.id)}
+            key={group}
+            className={`scenario-tab ${activeGroup === group ? "active" : ""}`}
+            style={{ "--tab-color": GROUPS[group].color }}
+            onClick={() => {
+              setActiveGroup(group);
+              setActiveId(incidents[0].id);
+            }}
           >
-            <span className="dot" style={{ background: s.color }}></span>
-            {ICONS[s.scenarioKey] || <FaShieldAlt />}
-            {s.tag}
+            <span className="dot" style={{ background: GROUPS[group].color }}></span>
+            {GROUPS[group].icon}
+            {group}
+            <span className="category-count">{incidents.length}</span>
           </button>
         ))}
       </div>
+
+      {visibleIncidents.length > 0 && (
+        <div className="incident-picker">
+          <div className="incident-picker-title">
+            <strong>{activeGroup} incidents</strong>
+            <span>Select an event to inspect</span>
+          </div>
+          <div className="incident-picker-list">
+            {visibleIncidents.map((incident) => (
+              <button key={incident.id} className={activeId === incident.id ? "active" : ""} onClick={() => setActiveId(incident.id)}>
+                <strong>{incident.blockId}</strong>
+                <span>{incident.title}</span>
+                <small>{incident.timestamp}</small>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {active ? (
         <ReceiptCard scenario={active} onReview={reviewIncident} />

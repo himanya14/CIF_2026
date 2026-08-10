@@ -35,6 +35,8 @@ function EmployeeChat({ onOpenBlockScreen }) {
           isUser: false,
           status: scenario.status,
           label: scenario.label,
+          department: scenario.department,
+          category: scenario.category,
           blockScenarioId: scenario.blockScenarioId,
           originalText: scenario.originalText,
           sanitizedText: scenario.sanitizedText,
@@ -101,6 +103,7 @@ function EmployeeChat({ onOpenBlockScreen }) {
 
                   {" "}
                   {message.label}
+                  {message.department && ` • ${message.department} / ${message.category}`}
                 </div>
 
                 {/* SANITIZATION DETAILS */}

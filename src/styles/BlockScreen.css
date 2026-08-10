@@ -88,6 +88,50 @@
     flex-shrink:0;
 }
 
+.category-count{
+    min-width:20px;
+    padding:2px 6px;
+    border-radius:999px;
+    background:rgba(255,255,255,.1);
+    color:#dceaff;
+    text-align:center;
+    font-size:11px;
+}
+
+.incident-picker{
+    max-width:980px;
+    margin:-10px 0 18px;
+    padding:16px;
+    border:1px solid #223b5b;
+    border-radius:16px;
+    background:#0c192a;
+}
+
+.incident-picker-title{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:12px;
+    color:#f4f8ff;
+}
+
+.incident-picker-title span{ color:#7f95b2; font-size:12px; }
+.incident-picker-list{ display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; }
+.incident-picker-list button{
+    min-width:220px;
+    padding:11px 13px;
+    border:1px solid #223b5b;
+    border-radius:11px;
+    background:#111d31;
+    color:#9fb2cc;
+    text-align:left;
+    cursor:pointer;
+}
+.incident-picker-list button.active{ border-color:#00d4ff; background:#122941; color:white; }
+.incident-picker-list button strong,.incident-picker-list button span,.incident-picker-list button small{ display:block; }
+.incident-picker-list button span{ margin:4px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.incident-picker-list button small{ color:#6f89aa; }
+
 /* ===========================
    RECEIPT CARD
 =========================== */

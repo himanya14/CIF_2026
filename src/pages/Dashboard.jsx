@@ -126,53 +126,28 @@ function Dashboard() {
 
           <div className="risk-bars">
 
-            <div className="risk-row">
-              <span>Finance</span>
-              <div className="progress">
-                <div className="finance"></div>
+            {liveData.departments.length === 0 ? (
+              <p>No department activity yet. Submit prompts in Employee Chat.</p>
+            ) : liveData.departments.map((department) => (
+              <div className="risk-row" key={department.department}>
+                <span>{department.department}</span>
+                <div className="progress">
+                  <div
+                    style={{
+                      width: `${Math.max(2, Number(department.score || 0))}%`,
+                      background: Number(department.score || 0) >= 75
+                        ? "#ff5252"
+                        : Number(department.score || 0) >= 45
+                          ? "#ffb000"
+                          : "#22e37d",
+                      height: "100%",
+                      borderRadius: "inherit",
+                    }}
+                  ></div>
+                </div>
+                <strong>{department.score}</strong>
               </div>
-              <strong>91</strong>
-            </div>
-
-            <div className="risk-row">
-              <span>HR</span>
-              <div className="progress">
-                <div className="hr"></div>
-              </div>
-              <strong>74</strong>
-            </div>
-
-            <div className="risk-row">
-              <span>IT</span>
-              <div className="progress">
-                <div className="it"></div>
-              </div>
-              <strong>58</strong>
-            </div>
-
-            <div className="risk-row">
-              <span>Legal</span>
-              <div className="progress">
-                <div className="legal"></div>
-              </div>
-              <strong>42</strong>
-            </div>
-
-            <div className="risk-row">
-              <span>Operations</span>
-              <div className="progress">
-                <div className="ops"></div>
-              </div>
-              <strong>34</strong>
-            </div>
-
-            <div className="risk-row">
-              <span>Marketing</span>
-              <div className="progress">
-                <div className="marketing"></div>
-              </div>
-              <strong>18</strong>
-            </div>
+            ))}
 
           </div>
 

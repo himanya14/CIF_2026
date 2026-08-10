@@ -14,3 +14,5 @@ export const getDashboard = () => apiRequest("/dashboard");
 export const inspectPrompt = (prompt) => apiRequest("/inspect", { method: "POST", body: JSON.stringify({ prompt }) });
 export const getIncidents = () => apiRequest("/incidents");
 export const updateIncident = (id, action) => apiRequest(`/incidents/${id}/${action}`, { method: "POST" });
+export const getRedTeamTests = () => apiRequest("/red-team/tests");
+export const createRedTeamTest = (test) => apiRequest("/red-team/tests", { method: "POST", body: JSON.stringify(test) });

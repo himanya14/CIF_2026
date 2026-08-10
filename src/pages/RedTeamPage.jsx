@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import "../styles/RedTeamPage.css";
 
@@ -8,6 +8,7 @@ import SimulationResultsTable from "../components/redteam/SimulationResultsTable
 import SimulationProgress from "../components/redteam/SimulationProgress";
 import FindingDetailsPanel from "../components/redteam/FindingDetailsPanel";
 import { runRedTeamTest } from "../services/redTeamSimulationService";
+import { createRedTeamTest, getRedTeamTests } from "../services/api";
 
 import {
   FaShieldAlt,
@@ -17,11 +18,20 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 
-import { redTeamTests } from "../data/redTeamData";
 import { toast } from "react-toastify";
 
 
 function RedTeamPage() {
+  const [tests, setTests] = useState([]);
+  const [isLoadingTests, setIsLoadingTests] = useState(true);
+  const [customTest, setCustomTest] = useState({ name: "", category: "Custom Attack", severity: "High", expectedAction: "BLOCK", prompt: "" });
+
+  useEffect(() => {
+    getRedTeamTests()
+      .then(data => setTests(data.tests))
+      .catch(error => toast.error(`Could not load tests: ${error.message}`))
+      .finally(() => setIsLoadingTests(false));
+  }, []);
   /* ==========================================
      SIMULATION STATE
   ========================================== */
@@ -38,9 +48,9 @@ function RedTeamPage() {
      VALUES DERIVED FROM TEST DATA
   ========================================== */
 
-  const totalTests = redTeamTests.length;
+  const totalTests = tests.length;
 
-  const threatTests = redTeamTests.filter(
+  const threatTests = tests.filter(
     (test) => test.isThreat
   ).length;
 
@@ -86,11 +96,11 @@ function RedTeamPage() {
 
   const currentTest =
     currentTestIndex >= 0
-      ? redTeamTests[currentTestIndex]
+      ? tests[currentTestIndex]
       : null;
 
 
-  const selectedTest = redTeamTests.find(
+  const selectedTest = tests.find(
     (test) => test.id === selectedTestId
   );
 
@@ -122,8 +132,8 @@ const handleRunSimulation = async () => {
   );
 
   try {
-    for (let index = 0;index < redTeamTests.length;index += 1) {
-      const test = redTeamTests[index];
+    for (let index = 0;index < tests.length;index += 1) {
+      const test = tests[index];
 
       setCurrentTestIndex(index);
 
@@ -174,7 +184,7 @@ const handleRunSimulation = async () => {
 };
 
 const handleMarkAsReviewed = (testId) => {
-  const reviewedTest = redTeamTests.find(
+  const reviewedTest = tests.find(
     (test) => test.id === testId
   );
 
@@ -195,6 +205,18 @@ const handleMarkAsReviewed = (testId) => {
   toast.success(
     `${reviewedTest?.name ?? "Finding"} marked as reviewed.`
   );
+};
+
+const handleCreateCustomTest = async (event) => {
+  event.preventDefault();
+  try {
+    const data = await createRedTeamTest(customTest);
+    setTests(previous => [...previous, data.test]);
+    setCustomTest(previous => ({ ...previous, name: "", prompt: "" }));
+    toast.success("Custom firewall test saved to SQLite.");
+  } catch (error) {
+    toast.error(error.message);
+  }
 };
   /* ==========================================
      STAT CARD DATA
@@ -282,7 +304,7 @@ const handleMarkAsReviewed = (testId) => {
               type="button"
               onClick={handleRunSimulation}
               disabled={
-                isRunning || totalTests === 0
+                isRunning || isLoadingTests || totalTests === 0
               }
             >
               <FaPlay />
@@ -301,6 +323,25 @@ const handleMarkAsReviewed = (testId) => {
             </button>
           </div>
         </section>
+
+        <form className="custom-test-panel" onSubmit={handleCreateCustomTest}>
+          <div className="custom-test-heading">
+            <div><span>LIVE FIREWALL TEST</span><h2>Implant a Custom Prompt</h2></div>
+            <p>The prompt is stored in SQLite and evaluated by the same firewall used by Employee Chat.</p>
+          </div>
+          <div className="custom-test-fields">
+            <input required placeholder="Scenario name" value={customTest.name} onChange={event => setCustomTest({ ...customTest, name: event.target.value })} />
+            <input required placeholder="Category" value={customTest.category} onChange={event => setCustomTest({ ...customTest, category: event.target.value })} />
+            <select value={customTest.severity} onChange={event => setCustomTest({ ...customTest, severity: event.target.value })}>
+              <option>Critical</option><option>High</option><option>Medium</option><option>Low</option>
+            </select>
+            <select value={customTest.expectedAction} onChange={event => setCustomTest({ ...customTest, expectedAction: event.target.value })}>
+              <option value="BLOCK">Expect Block</option><option value="SANITIZE">Expect Sanitize</option><option value="ALERT">Expect Alert</option><option value="WARN">Expect Warning</option><option value="ALLOW">Expect Allow</option>
+            </select>
+          </div>
+          <textarea required rows="4" placeholder="Enter any safe or adversarial prompt to test the firewall..." value={customTest.prompt} onChange={event => setCustomTest({ ...customTest, prompt: event.target.value })}></textarea>
+          <button className="run-simulation-btn" type="submit" disabled={isRunning}><FaFlask /> Save Custom Test</button>
+        </form>
 
 
         <section className="red-team-stats-section">
@@ -333,7 +374,7 @@ const handleMarkAsReviewed = (testId) => {
 
         <section className="red-team-workspace">
           <SimulationResultsTable
-            tests={redTeamTests}
+            tests={tests}
             results={results}
             selectedTestId={selectedTestId}
             activeTestId={

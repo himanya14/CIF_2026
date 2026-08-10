@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
+import { redTeamTests as seededRedTeamTests } from "../src/data/redTeamData.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dataDirectory = join(here, "data");
@@ -33,6 +34,7 @@ db.exec(`
     confidence REAL NOT NULL,
     policy TEXT NOT NULL,
     response TEXT NOT NULL,
+    detected_department TEXT NOT NULL DEFAULT 'General',
     incident_id TEXT,
     created_at TEXT NOT NULL
   );
@@ -56,6 +58,19 @@ db.exec(`
     passed_tests INTEGER NOT NULL DEFAULT 0,
     started_at TEXT NOT NULL,
     completed_at TEXT
+  );
+  CREATE TABLE IF NOT EXISTS red_team_tests (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    expected_action TEXT NOT NULL,
+    is_threat INTEGER NOT NULL,
+    direction TEXT NOT NULL DEFAULT 'INPUT',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    source TEXT NOT NULL DEFAULT 'CUSTOM',
+    created_at TEXT NOT NULL
   );
   CREATE TABLE IF NOT EXISTS red_team_results (
     id TEXT PRIMARY KEY,
@@ -82,6 +97,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_results_run ON red_team_results(run_id);
 `);
 
+const scanColumns = db.prepare("PRAGMA table_info(prompt_scans)").all();
+if (!scanColumns.some(column => column.name === "detected_department")) {
+  db.exec("ALTER TABLE prompt_scans ADD COLUMN detected_department TEXT NOT NULL DEFAULT 'General'");
+}
+db.exec(`UPDATE prompt_scans SET detected_department = CASE
+  WHEN lower(prompt) LIKE '%cvv%' OR lower(prompt) LIKE '%card number%' OR lower(prompt) LIKE '%pan %' OR lower(prompt) LIKE '%payment%' OR lower(prompt) LIKE '%bank%' OR lower(prompt) LIKE '%salary%' OR lower(prompt) LIKE '%tax%' THEN 'Finance'
+  WHEN lower(prompt) LIKE '%api key%' OR lower(prompt) LIKE '%password%' OR lower(prompt) LIKE '%token%' OR lower(prompt) LIKE '%aws%' OR lower(prompt) LIKE '%database%' OR lower(prompt) LIKE '%server%' OR lower(prompt) LIKE '%github%' OR lower(prompt) LIKE '%jailbreak%' THEN 'IT'
+  WHEN lower(prompt) LIKE '%aadhaar%' OR lower(prompt) LIKE '%aadhar%' OR lower(prompt) LIKE '%employee%' OR lower(prompt) LIKE '%candidate%' OR lower(prompt) LIKE '%resume%' OR lower(prompt) LIKE '%onboarding%' THEN 'HR'
+  WHEN lower(prompt) LIKE '%contract%' OR lower(prompt) LIKE '%legal%' OR lower(prompt) LIKE '%nda%' OR lower(prompt) LIKE '%compliance%' THEN 'Legal'
+  WHEN lower(prompt) LIKE '%vendor%' OR lower(prompt) LIKE '%inventory%' OR lower(prompt) LIKE '%logistics%' OR lower(prompt) LIKE '%shipment%' THEN 'Operations'
+  WHEN lower(prompt) LIKE '%campaign%' OR lower(prompt) LIKE '%marketing%' OR lower(prompt) LIKE '%advertisement%' OR lower(prompt) LIKE '%lead list%' THEN 'Marketing'
+  ELSE 'General' END
+  WHERE detected_department = 'General'`);
+
 const now = () => new Date().toISOString();
 const defaultUsers = [
   ["demo-user", "analyst@finserve-demo.in", "Demo Analyst", "Finance", "Security Analyst"],
@@ -90,6 +119,12 @@ const defaultUsers = [
 ];
 const insertUser = db.prepare("INSERT OR IGNORE INTO users (id,email,name,department,role,created_at) VALUES (?,?,?,?,?,?)");
 for (const user of defaultUsers) insertUser.run(...user, now());
+const insertRedTeamTest = db.prepare(`INSERT OR IGNORE INTO red_team_tests
+  (id,name,category,severity,prompt,expected_action,is_threat,direction,enabled,source,created_at)
+  VALUES (?,?,?,?,?,?,?,?,1,'SEEDED',?)`);
+for (const test of seededRedTeamTests) {
+  insertRedTeamTest.run(test.id, test.name, test.category, test.severity, test.prompt, test.expectedAction, test.isThreat ? 1 : 0, test.direction || "INPUT", now());
+}
 
 export function getUser(id = "demo-user") {
   return db.prepare("SELECT * FROM users WHERE id = ?").get(id) || db.prepare("SELECT * FROM users LIMIT 1").get();
@@ -97,11 +132,11 @@ export function getUser(id = "demo-user") {
 
 export function saveScan(scan, userId = "demo-user") {
   db.prepare(`INSERT INTO prompt_scans
-    (id,user_id,prompt,sanitized_text,status,label,category,risk_score,confidence,policy,response,incident_id,created_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    (id,user_id,prompt,sanitized_text,status,label,category,risk_score,confidence,policy,response,detected_department,incident_id,created_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
     scan.id, userId, scan.prompt, scan.sanitizedText, scan.status, scan.label,
     scan.category, scan.riskScore, scan.confidence, scan.policy, scan.response,
-    scan.incidentId, scan.inspectedAt
+    scan.department, scan.incidentId, scan.inspectedAt
   );
 }
 
@@ -127,6 +162,28 @@ export function updateIncidentStatus(id, status) {
 
 export function ensureRun(runId, totalTests) {
   db.prepare("INSERT OR IGNORE INTO red_team_runs (id,status,total_tests,started_at) VALUES (?,?,?,?)").run(runId, "RUNNING", totalTests, now());
+}
+
+function mapRedTeamTest(row) {
+  return { id: row.id, name: row.name, category: row.category, severity: row.severity,
+    prompt: row.prompt, expectedAction: row.expected_action, isThreat: Boolean(row.is_threat),
+    direction: row.direction, enabled: Boolean(row.enabled), source: row.source, createdAt: row.created_at };
+}
+
+export function listRedTeamTests() {
+  return db.prepare("SELECT * FROM red_team_tests WHERE enabled = 1 ORDER BY source DESC, created_at").all().map(mapRedTeamTest);
+}
+
+export function createRedTeamTest(input) {
+  const test = { id: randomUUID(), name: input.name.trim(), category: input.category.trim(), severity: input.severity,
+    prompt: input.prompt.trim(), expectedAction: input.expectedAction, isThreat: input.expectedAction !== "ALLOW",
+    direction: input.direction || "INPUT", source: "CUSTOM", createdAt: now() };
+  db.prepare(`INSERT INTO red_team_tests
+    (id,name,category,severity,prompt,expected_action,is_threat,direction,enabled,source,created_at)
+    VALUES (?,?,?,?,?,?,?,?,1,?,?)`).run(test.id, test.name, test.category, test.severity, test.prompt,
+    test.expectedAction, test.isThreat ? 1 : 0, test.direction, test.source, test.createdAt);
+  audit("RED_TEAM_TEST_CREATED", "red_team_test", test.id, { name: test.name, expectedAction: test.expectedAction });
+  return test;
 }
 
 export function saveRedTeamResult(result) {
@@ -158,9 +215,11 @@ export function getDashboard() {
     SUM(CASE WHEN status='cleaned' THEN 1 ELSE 0 END) sanitized,
     AVG(risk_score) average_risk FROM prompt_scans`).get();
   const redTeam = db.prepare("SELECT COUNT(*) total, SUM(passed) passed FROM red_team_results").get();
-  const departments = db.prepare(`SELECT u.department, COUNT(s.id) scans,
-    ROUND(AVG(s.risk_score)) score FROM users u JOIN prompt_scans s ON s.user_id=u.id
-    GROUP BY u.department ORDER BY score DESC`).all();
+  const departments = db.prepare(`SELECT detected_department department, COUNT(*) scans,
+    ROUND(AVG(risk_score)) score,
+    SUM(CASE WHEN status='blocked' THEN 1 ELSE 0 END) blocked,
+    SUM(CASE WHEN status='cleaned' THEN 1 ELSE 0 END) sanitized
+    FROM prompt_scans GROUP BY detected_department ORDER BY score DESC, scans DESC`).all();
   const categoryCounts = db.prepare("SELECT category name, COUNT(*) count FROM prompt_scans GROUP BY category ORDER BY count DESC").all();
   const activity = db.prepare(`SELECT substr(created_at,1,10) time,
     SUM(CASE WHEN status='allowed' THEN 1 ELSE 0 END) allowed,

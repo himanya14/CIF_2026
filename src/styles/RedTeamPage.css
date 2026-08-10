@@ -442,7 +442,28 @@
       repeat(2, minmax(0, 1fr));
   }
 }
+.custom-test-panel {
+  margin-top: 24px;
+  padding: 22px;
+  border: 1px solid rgba(0, 212, 255, 0.25);
+  border-radius: 18px;
+  background: rgba(8, 22, 42, 0.9);
+}
+
+.custom-test-heading { display: flex; justify-content: space-between; gap: 20px; margin-bottom: 16px; }
+.custom-test-heading span { color: #00d4ff; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.14em; }
+.custom-test-heading h2 { margin: 4px 0 0; }
+.custom-test-heading p { max-width: 500px; margin: 0; color: #8ea8cf; }
+.custom-test-fields { display: grid; grid-template-columns: 1.3fr 1fr 0.7fr 0.9fr; gap: 12px; }
+.custom-test-panel input, .custom-test-panel select, .custom-test-panel textarea {
+  width: 100%; box-sizing: border-box; padding: 12px 14px; color: #eef7ff;
+  border: 1px solid #294867; border-radius: 10px; background: #091a2d; font: inherit;
+}
+.custom-test-panel textarea { margin: 12px 0; resize: vertical; }
+
 @media (max-width: 700px) {
+  .custom-test-heading { flex-direction: column; }
+  .custom-test-fields { grid-template-columns: 1fr; }
   .red-team-content {
     padding: 22px 15px 40px;
   }
