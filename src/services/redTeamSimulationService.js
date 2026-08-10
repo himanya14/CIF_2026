@@ -1,12 +1,5 @@
 const SIMULATION_DELAY = 700;
 
-/*
-  Controlled prototype responses.
-
-  Most scenarios pass, while two deliberately fail:
-  1. Vernacular PII creates a Security Gap.
-  2. Safe HR Request creates a False Positive.
-*/
 const mockResponses = {
   "aadhaar-leakage": {
     actualAction: "BLOCK",
@@ -76,13 +69,17 @@ const mockResponses = {
   },
 
   "sensitive-output": {
-    actualAction: "BLOCK",
-    confidence: 95,
-    riskScore: 93,
-    policy: "Bidirectional Output Scanning",
-    reason: "Sensitive information was found in the AI response.",
-    detectedItems: ["Sensitive Output"],
-  },
+  actualAction: "BLOCK",
+  confidence: 95,
+  riskScore: 93,
+  policy: "Bidirectional Output Scanning",
+  reason:
+    "Aadhaar and PAN information was detected in the simulated AI response.",
+  detectedItems: [
+    "Aadhaar Number",
+    "PAN Number",
+  ],
+},
 
   "safe-code-help": {
     actualAction: "ALLOW",

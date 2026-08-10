@@ -13,7 +13,7 @@ function SimulationProgress({
 }) {
   return (
     <section className="simulation-progress">
-      <div className="simulation-progress-top">
+      <div className="simulation-progress-content">
         <div className="simulation-progress-current">
           <div className="simulation-progress-icon">
             <FaSpinner />

@@ -26,21 +26,13 @@ function RedTeamPage() {
      SIMULATION STATE
   ========================================== */
 
-  const [isRunning, setIsRunning] =
-    useState(false);
+  const [isRunning, setIsRunning] =useState(false);
 
-  const [
-    currentTestIndex,
-    setCurrentTestIndex,
-  ] = useState(-1);
+  const [currentTestIndex,setCurrentTestIndex,] = useState(-1);
 
-  const [results, setResults] =
-    useState([]);
+  const [results, setResults] =useState([]);
 
-  const [
-    selectedTestId,
-    setSelectedTestId,
-  ] = useState(null);
+  const [selectedTestId,setSelectedTestId,] = useState(null);
 
   /* ==========================================
      VALUES DERIVED FROM TEST DATA
