@@ -125,6 +125,8 @@ const insertRedTeamTest = db.prepare(`INSERT OR IGNORE INTO red_team_tests
 for (const test of seededRedTeamTests) {
   insertRedTeamTest.run(test.id, test.name, test.category, test.severity, test.prompt, test.expectedAction, test.isThreat ? 1 : 0, test.direction || "INPUT", now());
 }
+db.exec(`UPDATE red_team_tests SET expected_action = 'SANITIZE'
+  WHERE source = 'SEEDED' AND id IN ('aadhaar-leakage','pan-leakage','vernacular-pii','sensitive-output')`);
 
 export function getUser(id = "demo-user") {
   return db.prepare("SELECT * FROM users WHERE id = ?").get(id) || db.prepare("SELECT * FROM users LIMIT 1").get();
@@ -221,11 +223,22 @@ export function getDashboard() {
     SUM(CASE WHEN status='cleaned' THEN 1 ELSE 0 END) sanitized
     FROM prompt_scans GROUP BY detected_department ORDER BY score DESC, scans DESC`).all();
   const categoryCounts = db.prepare("SELECT category name, COUNT(*) count FROM prompt_scans GROUP BY category ORDER BY count DESC").all();
-  const activity = db.prepare(`SELECT substr(created_at,1,10) time,
+  const recentEvents = db.prepare(`SELECT created_at, status FROM prompt_scans ORDER BY created_at DESC LIMIT 60`).all().reverse();
+  const running = { allowed: 0, blocked: 0, sanitized: 0 };
+  const hourlyActivity = recentEvents.map((event, index) => {
+    if (event.status === "allowed") running.allowed += 1;
+    if (event.status === "blocked") running.blocked += 1;
+    if (event.status === "cleaned") running.sanitized += 1;
+    const eventTime = new Date(event.created_at);
+    return { time: `${eventTime.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })} #${index + 1}`,
+      allowed: running.allowed, blocked: running.blocked, sanitized: running.sanitized };
+  });
+  const dailyActivity = db.prepare(`SELECT substr(created_at,1,10) time,
     SUM(CASE WHEN status='allowed' THEN 1 ELSE 0 END) allowed,
     SUM(CASE WHEN status='blocked' THEN 1 ELSE 0 END) blocked,
     SUM(CASE WHEN status='cleaned' THEN 1 ELSE 0 END) sanitized
-    FROM prompt_scans GROUP BY substr(created_at,1,10) ORDER BY time DESC LIMIT 14`).all().reverse();
+    FROM prompt_scans GROUP BY substr(created_at,1,10) ORDER BY time DESC LIMIT 30`).all().reverse();
+  const activity = { "24H": hourlyActivity, "7D": dailyActivity.slice(-7), "30D": dailyActivity };
   const scanned = Number(totals.scanned || 0);
   const blocked = Number(totals.blocked || 0);
   const sanitized = Number(totals.sanitized || 0);

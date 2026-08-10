@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "../../styles/BlockScreen.css";
 import { getIncidents, updateIncident } from "../../services/api";
+import { toast } from "react-toastify";
 
 import {
   FaShieldAlt,
@@ -13,6 +14,7 @@ import {
   FaCheckCircle,
   FaSearch,
   FaGavel,
+  FaTimes,
 } from "react-icons/fa";
 
 const GROUPS = {
@@ -59,8 +61,15 @@ function BlockScreen({ onBack, selectedScenarioId }) {
 
   const reviewIncident = async (action) => {
     if (!active) return;
-    const result = await updateIncident(active.id, action);
-    setScenarios(current => current.map(item => item.id === active.id ? { ...item, reviewStatus: result.reviewStatus } : item));
+    try {
+      const result = await updateIncident(active.id, action);
+      setScenarios(current => current.map(item => item.id === active.id ? { ...item, reviewStatus: result.reviewStatus } : item));
+      toast.success(action === "acknowledge" ? "Incident acknowledged and saved." : "False-positive report saved for review.");
+      return result;
+    } catch (error) {
+      toast.error(`Could not update incident: ${error.message}`);
+      throw error;
+    }
   };
 
   return (
@@ -126,6 +135,13 @@ function BlockScreen({ onBack, selectedScenarioId }) {
 
 function ReceiptCard({ scenario, onReview }) {
   const honey = !!scenario.isHoneytoken;
+  const [showPolicy, setShowPolicy] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleReview = async (action) => {
+    setIsUpdating(true);
+    try { await onReview(action); } finally { setIsUpdating(false); }
+  };
 
   return (
     <div className="receipt-card" key={scenario.id}>
@@ -182,21 +198,13 @@ function ReceiptCard({ scenario, onReview }) {
       </div>
 
       <div className="receipt-body">
-        {/* USER / SOURCE META */}
+        {/* INCIDENT META */}
         <div className="receipt-section">
           <h3><FaSearch /> Incident Context</h3>
-          <div className="dpdp-grid" style={{ gridTemplateColumns: "repeat(4,1fr)" }}>
-            <div>
-              <span>User</span>
-              <strong style={{ fontSize: 13 }}>{scenario.user}</strong>
-            </div>
+          <div className="dpdp-grid" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
             <div>
               <span>Department</span>
               <strong style={{ fontSize: 13 }}>{scenario.department}</strong>
-            </div>
-            <div>
-              <span>Source App</span>
-              <strong style={{ fontSize: 13 }}>{scenario.sourceApp}</strong>
             </div>
             <div>
               <span>Confidence</span>
@@ -265,11 +273,29 @@ function ReceiptCard({ scenario, onReview }) {
 
         {/* ACTIONS */}
         <div className="receipt-actions">
-          <button className="btn btn-primary" onClick={() => onReview("acknowledge")}>Acknowledge &amp; Continue</button>
-          <button className="btn btn-outline" onClick={() => onReview("false-positive")}>Report False Positive</button>
-          <button className="btn btn-outline">View Full Policy →</button>
+          <button className="btn btn-primary" disabled={isUpdating} onClick={() => handleReview("acknowledge")}>Acknowledge &amp; Continue</button>
+          <button className="btn btn-outline" disabled={isUpdating} onClick={() => handleReview("false-positive")}>Report False Positive</button>
+          <button className="btn btn-outline" onClick={() => setShowPolicy(true)}>View Full Policy →</button>
+          {scenario.reviewStatus && scenario.reviewStatus !== "UNREVIEWED" && (
+            <span className="review-status">{scenario.reviewStatus.replaceAll("_", " ")}</span>
+          )}
         </div>
       </div>
+      {showPolicy && (
+        <div className="policy-modal-backdrop" role="presentation" onMouseDown={() => setShowPolicy(false)}>
+          <section className="policy-modal" role="dialog" aria-modal="true" aria-labelledby="policy-title" onMouseDown={event => event.stopPropagation()}>
+            <button className="policy-modal-close" onClick={() => setShowPolicy(false)} aria-label="Close policy"><FaTimes /></button>
+            <div className="rule-id-tag">{scenario.ruleId}</div>
+            <h2 id="policy-title">{scenario.ruleName}</h2>
+            <p>{scenario.ruleDesc}</p>
+            <h3>Regulatory basis</h3>
+            <p>{scenario.regulation}</p>
+            <h3>Required response</h3>
+            <ul>{scenario.fix.map((item, index) => <li key={index}>{item}</li>)}</ul>
+            <button className="btn btn-primary" onClick={() => setShowPolicy(false)}>Close Policy</button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

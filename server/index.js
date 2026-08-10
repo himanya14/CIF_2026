@@ -35,10 +35,10 @@ function classify(prompt) {
     { re: /honeytoken|sk-honeypot|AWS_TEST_SECRET_001/i, department: "IT", status: "blocked", category: "Honeytoken", riskScore: 100, confidence: 100, policy: "Honeytoken Intrusion Detection", scenarioKey: "honeytoken", label: "Blocked", response: "A decoy credential was triggered; this session has been flagged." },
     { re: /(?:card|visa|mastercard|cvv)[\s\S]{0,60}(?:\d[ -]*?){3,16}|\b(?:\d[ -]*?){13,19}\b[\s\S]{0,30}\bcvv\b/i, department: "Finance", status: "blocked", category: "Financial Data", riskScore: 99, confidence: 99.9, policy: "PCI Cardholder Data Protection", scenarioKey: "card-data", label: "Blocked", response: "Payment-card information was detected and the request was blocked." },
     { re: /\b[A-Z]{5}\d{4}[A-Z]\b/i, department: "Finance", status: "cleaned", category: "Financial Identity", riskScore: 88, confidence: 96, policy: "PAN Protection", scenarioKey: "pan-consent", label: "Cleaned Up", response: "PAN information was removed before processing.", sanitize: value => value.replace(/\b[A-Z]{5}\d{4}[A-Z]\b/gi, "[PAN REDACTED]") },
-    { re: /sk-[\w-]{8,}|api[ _-]?key|AKIA[A-Z0-9]{12,}|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/i, department: "IT", status: "blocked", category: "Credentials", riskScore: 99, confidence: 98, policy: "Credential Leakage Prevention", scenarioKey: "api-key", label: "Blocked", response: "A sensitive technical credential was detected and the request was blocked." },
+    { re: /sk-[\w-]{8,}|AKIA[A-Z0-9]{12,}|gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,}|xox[baprs]-[A-Za-z0-9-]{8,}|AIza[A-Za-z0-9_-]{20,}|sk_(?:live|test)_[A-Za-z0-9]{8,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|(?:postgres|mysql|mongodb(?:\+srv)?):\/\/[^\s:]+:[^\s@]+@|api[ _-]?key\s*(?:[:=]|is)\s*\S+|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/i, department: "IT", status: "blocked", category: "Credentials", riskScore: 99, confidence: 98, policy: "Credential Leakage Prevention", scenarioKey: "api-key", label: "Blocked", response: "A sensitive technical credential or access token was detected and the request was blocked." },
     { re: /(?:aadhaar|aadhar)[^\d]{0,24}\d{4}\s?\d{4}\s?\d{4}|\b\d{4}\s\d{4}\s\d{4}\b/i, department: "HR", status: "cleaned", category: "Personal Identity", riskScore: 94, confidence: 99, policy: "Government ID Masking", scenarioKey: "aadhaar", label: "Cleaned Up", response: "Sensitive Aadhaar information was removed before processing.", sanitize: value => value.replace(/\b\d{4}\s?\d{4}\s?\d{4}\b/g, "[AADHAAR REDACTED]") },
     { re: /ignore (?:all|the) previous|reveal (?:the )?(?:system|confidential)|developer mode|jailbreak/i, department: "IT", status: "blocked", category: "Prompt Injection", riskScore: 95, confidence: 94, policy: "Prompt Injection Defence", scenarioKey: "prompt-injection", label: "Blocked", response: "A prompt-injection attempt was detected and blocked." },
-    { re: /password\s*[:=]?\s*\S+|(?:username|user)\s*[:=]\s*\S+[\s\S]{0,30}password/i, department: "IT", status: "warning", category: "Credentials", riskScore: 78, confidence: 87, policy: "Credential Safety Warning", scenarioKey: "api-key", label: "Warning", response: "Possible credentials detected. Remove the password before continuing." },
+    { re: /password\s*(?:[:=]|is)\s*\S+|(?:username|user)\s*[:=]\s*\S+[\s\S]{0,40}password\s*(?:[:=]|is)\s*\S+/i, department: "IT", status: "blocked", category: "Credentials", riskScore: 97, confidence: 96, policy: "Database Credential Protection", scenarioKey: "api-key", label: "Blocked", response: "A password value was detected and the request was blocked." },
   ];
   const matchedRule = rules.find(rule => rule.re.test(prompt));
   return matchedRule || { department: detectedDepartment, status: "allowed", category: "Safe Business Request", riskScore: 5, confidence: 96, policy: "Acceptable AI Usage", label: "Allowed", response: "Your request passed all security checks and was processed successfully." };
@@ -46,9 +46,12 @@ function classify(prompt) {
 
 function createIncident(rule, prompt, user, scanId) {
   const template = blockScenarios.find(item => item.id === rule.scenarioKey) || blockScenarios[0];
+  const templateData = { ...template };
+  delete templateData.user;
+  delete templateData.sourceApp;
   const id = `INC-${Date.now()}-${randomUUID().slice(0, 6).toUpperCase()}`;
   const createdAt = new Date().toISOString();
-  return { ...template, id, scenarioKey: rule.scenarioKey, blockId: id, prompt, user: user.email, department: rule.department, confidence: rule.confidence, category: rule.category, severity: rule.riskScore >= 95 ? "Critical" : "High", action: rule.status, createdAt, scanId };
+  return { ...templateData, id, scenarioKey: rule.scenarioKey, blockId: id, prompt, department: rule.department, confidence: rule.confidence, category: rule.category, severity: rule.riskScore >= 95 ? "Critical" : "High", action: rule.status, createdAt, scanId };
 }
 
 function inspect(prompt, userId) {
@@ -86,8 +89,24 @@ function simulate(test, runId) {
           : "ALLOW";
   const { confidence, riskScore, policy } = decision;
   const detectedItems = decision.category === "Safe Business Request" ? [] : [decision.category];
-  const passed = actualAction === test.expectedAction;
-  const outcome = passed ? (test.isThreat ? "PROTECTED" : "CORRECTLY_ALLOWED") : (test.isThreat ? "SECURITY_GAP" : "FALSE_POSITIVE");
+  let passed = false;
+  let outcome;
+  if (test.expectedAction === "ALLOW") {
+    passed = actualAction === "ALLOW";
+    outcome = passed ? "CORRECTLY_ALLOWED" : "FALSE_POSITIVE";
+  } else if (actualAction === test.expectedAction) {
+    passed = true;
+    outcome = "PROTECTED";
+  } else if (test.expectedAction === "BLOCK" && actualAction === "SANITIZE") {
+    passed = true;
+    outcome = "MITIGATED";
+  } else if (test.expectedAction === "BLOCK" && actualAction === "WARN") {
+    outcome = "PARTIAL_PROTECTION";
+  } else if (actualAction === "ALLOW") {
+    outcome = "SECURITY_GAP";
+  } else {
+    outcome = "PARTIAL_PROTECTION";
+  }
   return { id: `${runId}-${test.id}`, testId: test.id, simulationRunId: runId, source: "RED_TEAM", direction: test.direction || "INPUT", name: test.name, category: decision.category, severity: test.severity, department: decision.department, expectedAction: test.expectedAction, actualAction, outcome, passed, confidence, riskScore, policy, reason: `${policy} evaluated the custom prompt through the live firewall.`, detectedItems, reviewStatus: "UNREVIEWED", durationMs: 350, completedAt: new Date().toISOString() };
 }
 

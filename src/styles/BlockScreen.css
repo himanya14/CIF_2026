@@ -4,7 +4,8 @@
 
 .block-screen{
     padding:28px;
-    background:#081321;
+    padding-bottom:120px;
+    background:radial-gradient(circle at 12% 8%,rgba(0,212,255,.08),transparent 28%),radial-gradient(circle at 88% 20%,rgba(62,166,255,.06),transparent 24%),#081321;
     min-height:100vh;
 }
 
@@ -15,6 +16,9 @@
     margin-bottom:24px;
     flex-wrap:wrap;
     gap:14px;
+    max-width:1200px;
+    margin-left:auto;
+    margin-right:auto;
 }
 
 .block-screen-header h1{
@@ -53,6 +57,13 @@
     gap:12px;
     flex-wrap:wrap;
     margin-bottom:26px;
+    max-width:1184px;
+    margin-left:auto;
+    margin-right:auto;
+    padding:8px;
+    border:1px solid rgba(42,74,117,.55);
+    border-radius:18px;
+    background:rgba(8,22,39,.65);
 }
 
 .scenario-tab{
@@ -76,7 +87,7 @@
 }
 
 .scenario-tab.active{
-    background:#16233b;
+    background:linear-gradient(135deg,#182b47,#12223a);
     color:white;
     box-shadow:0 0 0 1px var(--tab-color, #00d4ff) inset;
 }
@@ -99,12 +110,14 @@
 }
 
 .incident-picker{
-    max-width:980px;
+    max-width:1168px;
     margin:-10px 0 18px;
     padding:16px;
     border:1px solid #223b5b;
     border-radius:16px;
     background:#0c192a;
+    margin-left:auto;
+    margin-right:auto;
 }
 
 .incident-picker-title{
@@ -128,6 +141,7 @@
     cursor:pointer;
 }
 .incident-picker-list button.active{ border-color:#00d4ff; background:#122941; color:white; }
+.incident-picker-list button:hover{ border-color:#3e78aa; transform:translateY(-1px); }
 .incident-picker-list button strong,.incident-picker-list button span,.incident-picker-list button small{ display:block; }
 .incident-picker-list button span{ margin:4px 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .incident-picker-list button small{ color:#6f89aa; }
@@ -137,11 +151,13 @@
 =========================== */
 
 .receipt-card{
-    background:#111d31;
-    border:1px solid #223b5b;
-    border-radius:22px;
+    background:linear-gradient(180deg,#111f34,#0d192a);
+    border:1px solid #294766;
+    border-radius:24px;
     overflow:hidden;
-    max-width:980px;
+    max-width:1200px;
+    margin:0 auto;
+    box-shadow:0 24px 70px rgba(0,0,0,.28),0 0 0 1px rgba(0,212,255,.025) inset;
 }
 
 .receipt-top{
@@ -500,6 +516,10 @@
     gap:12px;
     flex-wrap:wrap;
     padding-top:6px;
+    padding:18px;
+    border:1px solid rgba(42,74,117,.45);
+    border-radius:16px;
+    background:rgba(5,14,25,.38);
 }
 
 .btn{
@@ -530,6 +550,67 @@
 .btn-outline:hover{
     border-color:#3ea6ff;
     color:white;
+}
+
+.receipt-section{
+    padding:18px;
+    border:1px solid rgba(42,74,117,.55);
+    border-radius:16px;
+    background:rgba(7,17,30,.42);
+}
+
+.btn:disabled{ opacity:.55; cursor:wait; }
+.review-status{
+    align-self:center;
+    padding:7px 11px;
+    border-radius:999px;
+    background:rgba(34,227,125,.12);
+    color:#22e37d;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.04em;
+}
+
+.policy-modal-backdrop{
+    position:fixed;
+    inset:0;
+    z-index:1200;
+    display:grid;
+    place-items:center;
+    padding:20px;
+    background:rgba(2,8,17,.82);
+    backdrop-filter:blur(5px);
+}
+
+.policy-modal{
+    position:relative;
+    width:min(680px,100%);
+    max-height:85vh;
+    overflow:auto;
+    padding:28px;
+    border:1px solid #2a4a75;
+    border-radius:20px;
+    background:#0c192a;
+    box-shadow:0 25px 80px rgba(0,0,0,.55);
+    color:#dceaff;
+}
+.policy-modal h2{ margin:4px 40px 18px 0; color:white; }
+.policy-modal h3{ margin:22px 0 8px; color:#00d4ff; }
+.policy-modal p,.policy-modal li{ color:#9fb2cc; line-height:1.7; }
+.policy-modal ul{ margin:0 0 24px 20px; display:grid; gap:8px; }
+.policy-modal-close{
+    position:absolute;
+    top:18px;
+    right:18px;
+    width:36px;
+    height:36px;
+    display:grid;
+    place-items:center;
+    border:1px solid #294867;
+    border-radius:10px;
+    background:#111d31;
+    color:white;
+    cursor:pointer;
 }
 
 /* ===========================

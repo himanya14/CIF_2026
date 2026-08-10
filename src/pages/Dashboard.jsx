@@ -24,7 +24,7 @@ import {
 function Dashboard() {
   const [liveData, setLiveData] = useState({
     kpis: { scanned: 0, blocked: 0, sanitized: 0, securityScore: 100, riskPrevented: "₹0.0L" },
-    activity: [], categories: [], departments: [],
+    activity: { "24H": [], "7D": [], "30D": [] }, categories: [], departments: [],
   });
 
   useEffect(() => {

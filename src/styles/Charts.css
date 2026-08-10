@@ -260,3 +260,6 @@ opacity:0;
     color:#081321;
     border-color:#00d4ff;
 }
+
+.chart-subtitle{ color:#8ea8cf; font-size:13px; }
+.chart-empty{ height:360px; display:grid; place-items:center; color:#8ea8cf; border:1px dashed #294867; border-radius:14px; }

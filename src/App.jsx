@@ -38,35 +38,29 @@ function App() {
     setView("red-team");
   };
 
-  const renderCurrentView = () => {
-    if (view === "employee-chat") {
-      return (
+  return (
+    <>
+      <div hidden={view !== "employee-chat"}>
         <EmployeeChat
           onOpenBlockScreen={openBlockScreen}
           onBack={openDashboard}
         />
-      );
-    }
+      </div>
 
-    if (view === "blocked") {
-      return (
+      <div hidden={view !== "dashboard"}>
+        <Dashboard />
+      </div>
+
+      <div hidden={view !== "red-team"}>
+        <RedTeamPage />
+      </div>
+
+      <div hidden={view !== "blocked"}>
         <BlockScreen
           selectedScenarioId={selectedBlockId}
-          onBack={openEmployeeChat}
+          onBack={openDashboard}
         />
-      );
-    }
-
-    if (view === "red-team") {
-      return <RedTeamPage />;
-    }
-
-    return <Dashboard />;
-  };
-
-  return (
-    <>
-      {renderCurrentView()}
+      </div>
 
       <nav
         className="app-navigation"

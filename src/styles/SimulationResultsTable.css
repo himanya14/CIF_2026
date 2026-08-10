@@ -344,6 +344,16 @@
     background: rgba(34, 227, 125, 0.1);
 }
 
+.outcome-badge--mitigated {
+    color: #00d4ff;
+    background: rgba(0, 212, 255, 0.12);
+}
+
+.outcome-badge--partial-protection {
+    color: #ffb000;
+    background: rgba(255, 176, 0, 0.13);
+}
+
 
 .outcome-badge--security-gap,
 .outcome-badge--false-positive {

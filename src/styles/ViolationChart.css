@@ -9,14 +9,18 @@
 .violation-card h2{
     color:white;
     font-size:30px;
-    margin-bottom:25px;
+    margin-bottom:4px;
 }
+
+.violation-heading{ margin-bottom:24px; }
+.violation-heading span{ color:#8ea8cf; font-size:13px; }
 
 .violation-content{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    gap:40px;
+    gap:34px;
+    min-height:300px;
 }
 
 .donut-chart{
@@ -26,15 +30,7 @@
 
     border-radius:50%;
 
-    background:
-    conic-gradient(
-        #4285F4 0% 32%,
-        #ff4d4f 32% 56%,
-        #ffb020 56% 74%,
-        #20c7b7 74% 88%,
-        #8b5cf6 88% 96%,
-        #60a5fa 96% 100%
-    );
+    background:var(--donut-gradient);
 
     display:flex;
     justify-content:center;
@@ -69,8 +65,12 @@
     margin-top:6px;
 }
 
-.legend{
-    flex:1;
+.violation-legend{
+    flex:1 1 320px;
+    min-width:0;
+    max-height:300px;
+    overflow:auto;
+    padding-right:8px;
 }
 
 .legend-item{
@@ -79,7 +79,9 @@
     justify-content:space-between;
     align-items:center;
 
-    margin-bottom:18px;
+    min-height:38px;
+    margin-bottom:4px;
+    padding:6px 4px;
 
     color:white;
 }
@@ -90,7 +92,10 @@
     align-items:center;
 
     gap:12px;
+    min-width:0;
 }
+
+.legend-left span:last-child{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 .legend-dot{
 
@@ -98,6 +103,7 @@
     height:12px;
 
     border-radius:50%;
+    flex:0 0 12px;
 }
 
 .legend-item strong{
@@ -126,3 +132,5 @@ flex-direction:column;
 }
 
 }
+
+.violation-empty{ color:#8ea8cf; padding:30px 0; }

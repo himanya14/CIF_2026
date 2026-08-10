@@ -1,73 +1,92 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getDashboard, getIncidents } from "../services/api";
+
+function riskLabel(score) {
+  if (score >= 75) return "High";
+  if (score >= 45) return "Medium";
+  return "Low";
+}
 
 export async function generateReport() {
-
-  const doc = new jsPDF();
-
+  const [dashboard, incidentData] = await Promise.all([getDashboard(), getIncidents()]);
+  const incidents = incidentData.incidents || [];
   const now = new Date();
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
 
-  doc.setFontSize(22);
-  doc.setTextColor(0, 80, 180);
-  doc.text("AI WATCH TOWER", 20, 20);
-
-  doc.setFontSize(13);
+  doc.setFillColor(8, 19, 33);
+  doc.rect(0, 0, 210, 35, "F");
+  doc.setTextColor(0, 212, 255);
+  doc.setFontSize(21);
+  doc.text("AI WATCH TOWER", 15, 16);
+  doc.setTextColor(220, 234, 255);
+  doc.setFontSize(11);
+  doc.text("Database-backed Executive Security Report", 15, 25);
   doc.setTextColor(80);
-  doc.text("Executive Security Report", 20, 30);
-
-  doc.text(`Generated: ${now.toLocaleString()}`, 20, 40);
-
-  doc.setFontSize(16);
-  doc.text("Security Overview", 20, 58);
+  doc.setFontSize(9);
+  doc.text(`Generated: ${now.toLocaleString("en-IN")}`, 15, 42);
 
   autoTable(doc, {
-    startY: 65,
-    head: [["Metric", "Value"]],
+    startY: 48,
+    head: [["Metric", "Live value"]],
     body: [
-      ["Security Score", "92 / 100"],
-      ["Prompts Scanned", "247"],
-      ["Blocked Prompts", "12"],
-      ["Sanitized Prompts", "31"],
-      ["Risk Prevented", "₹1.8L"],
+      ["Security Score", `${dashboard.kpis.securityScore} / 100`],
+      ["Prompts Scanned", String(dashboard.kpis.scanned)],
+      ["Blocked Prompts", String(dashboard.kpis.blocked)],
+      ["Sanitized Prompts", String(dashboard.kpis.sanitized)],
+      ["Risk Prevented", String(dashboard.kpis.riskPrevented).replace("₹", "INR ")],
+      ["Recorded Incidents", String(incidents.length)],
     ],
+    theme: "grid",
+    headStyles: { fillColor: [18, 51, 78] },
   });
 
-  doc.text("Department Risk Levels", 20, doc.lastAutoTable.finalY + 18);
-
+  let nextY = doc.lastAutoTable.finalY + 10;
+  doc.setFontSize(14);
+  doc.setTextColor(20, 55, 90);
+  doc.text("Department Risk", 15, nextY);
   autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 25,
-    head: [["Department", "Risk", "Score"]],
-    body: [
-      ["Finance", "High", "91"],
-      ["HR", "Medium", "74"],
-      ["IT", "Medium", "58"],
-      ["Legal", "Low", "42"],
-      ["Operations", "Low", "34"],
-      ["Marketing", "Minimal", "18"],
-    ],
+    startY: nextY + 4,
+    head: [["Department", "Scans", "Blocked", "Sanitized", "Risk", "Score"]],
+    body: dashboard.departments.length
+      ? dashboard.departments.map(item => [item.department, item.scans, item.blocked, item.sanitized, riskLabel(Number(item.score)), item.score])
+      : [["No department activity", "0", "0", "0", "Low", "0"]],
+    theme: "striped",
+    headStyles: { fillColor: [18, 51, 78] },
   });
 
-  doc.text(
-    "AI Summary",
-    20,
-    doc.lastAutoTable.finalY + 18
-  );
+  nextY = doc.lastAutoTable.finalY + 10;
+  doc.text("Violation Categories", 15, nextY);
+  autoTable(doc, {
+    startY: nextY + 4,
+    head: [["Category", "Share"]],
+    body: dashboard.categories.length ? dashboard.categories.map(item => [item.name, `${item.value}%`]) : [["No violations", "0%"]],
+    theme: "striped",
+    headStyles: { fillColor: [18, 51, 78] },
+  });
 
-  doc.setFontSize(12);
+  nextY = doc.lastAutoTable.finalY + 10;
+  doc.text("Recent Incidents", 15, nextY);
+  autoTable(doc, {
+    startY: nextY + 4,
+    head: [["Incident", "Department", "Category", "Severity", "Status"]],
+    body: incidents.length
+      ? incidents.slice(0, 12).map(item => [item.blockId, item.department, item.category, item.severity, item.reviewStatus])
+      : [["No incidents recorded", "-", "-", "-", "-"]],
+    theme: "grid",
+    styles: { fontSize: 7.5 },
+    headStyles: { fillColor: [18, 51, 78] },
+  });
 
-  doc.text(
-    [
-      "• Finance remains the highest-risk department.",
-      "• Prompt injection attempts increased this week.",
-      "• Overall security posture is stable.",
-      "• No critical incidents detected.",
-    ],
-    20,
-    doc.lastAutoTable.finalY + 28
-  );
+  const pageCount = doc.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page += 1) {
+    doc.setPage(page);
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+    doc.text(`AI Watch Tower | Page ${page} of ${pageCount}`, 105, 290, { align: "center" });
+  }
 
-  doc.save(
-    `AI_WatchTower_Report_${now.toLocaleDateString("en-GB").replace(/\//g, "-")}.pdf`
-  );
-
+  const fileDate = now.toISOString().slice(0, 10);
+  doc.save(`AI_WatchTower_Live_Report_${fileDate}.pdf`);
+  return { fileName: `AI_WatchTower_Live_Report_${fileDate}.pdf` };
 }

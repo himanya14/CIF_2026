@@ -384,3 +384,5 @@
     pointer-events:auto;
 
 }
+
+.report-btn:disabled{ opacity:.65; cursor:wait; transform:none; }

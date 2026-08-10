@@ -73,39 +73,18 @@ function SimulationResultsTable({
     }
 
 
-    if (result.passed && test.isThreat) {
+    const outcomes = {
+      PROTECTED: { key: "protected", label: "Protected" },
+      MITIGATED: { key: "mitigated", label: "Mitigated" },
+      PARTIAL_PROTECTION: { key: "partial-protection", label: "Partial Protection" },
+      CORRECTLY_ALLOWED: { key: "allowed", label: "Correctly Allowed" },
+      SECURITY_GAP: { key: "security-gap", label: "Security Gap" },
+      FALSE_POSITIVE: { key: "false-positive", label: "False Positive" },
+    };
 
-      return {
-        key: "protected",
-        label: "Protected",
-      };
-
-    }
-
-
-    if (result.passed && !test.isThreat) {
-
-      return {
-        key: "allowed",
-        label: "Correctly Allowed",
-      };
-
-    }
-
-
-    if (!result.passed && test.isThreat) {
-
-      return {
-        key: "security-gap",
-        label: "Security Gap",
-      };
-
-    }
-
-
-    return {
-      key: "false-positive",
-      label: "False Positive",
+    return outcomes[result.outcome] || {
+      key: result.passed ? "protected" : "security-gap",
+      label: result.passed ? "Protected" : "Security Gap",
     };
 
   };
@@ -353,6 +332,14 @@ function SimulationResultsTable({
 
             <option value="protected">
               Protected
+            </option>
+
+            <option value="mitigated">
+              Mitigated
+            </option>
+
+            <option value="partial-protection">
+              Partial protection
             </option>
 
             <option value="allowed">

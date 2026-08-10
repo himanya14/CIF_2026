@@ -22,13 +22,24 @@ const itInspection = await fetch(`http://localhost:${port}/api/inspect`, {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ prompt: "Deploy using API key sk-test-123456789" }),
 }).then(response => response.json());
+const githubInspection = await fetch(`http://localhost:${port}/api/inspect`, {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ prompt: "Use GitHub token ghp_1234567890abcdef for deployment" }),
+}).then(response => response.json());
+const passwordInspection = await fetch(`http://localhost:${port}/api/inspect`, {
+  method: "POST", headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ prompt: "Database password is CompanyDB@123" }),
+}).then(response => response.json());
+const review = await fetch(`http://localhost:${port}/api/incidents/${financeInspection.incidentId}/acknowledge`, {
+  method: "POST", headers: { "Content-Type": "application/json" },
+}).then(response => response.json());
 const simulation = await fetch(`http://localhost:${port}/api/red-team/test`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({ simulationRunId: "smoke-test", test: { id: "api-key-exposure", name: "API Key Exposure", prompt: "Use API key sk-test-123456789", category: "Credentials", severity: "Critical", expectedAction: "BLOCK", isThreat: true } }),
 }).then(response => response.json());
 
-if (health.status !== "ok" || inspection.department !== "HR" || financeInspection.department !== "Finance" || itInspection.department !== "IT" || !simulation.passed) {
+if (health.status !== "ok" || inspection.department !== "HR" || financeInspection.department !== "Finance" || itInspection.department !== "IT" || githubInspection.status !== "blocked" || passwordInspection.status !== "blocked" || review.reviewStatus !== "ACKNOWLEDGED" || !simulation.passed) {
   throw new Error("Backend smoke test failed");
 }
 

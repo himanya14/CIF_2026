@@ -12,12 +12,14 @@ import { useEffect, useRef, useState } from "react";
 
 import NotificationPanel from "./NotificationPanel";
 import { generateReport } from "../utils/generateReport";
+import { toast } from "react-toastify";
 
 function Navbar() {
 
   const [now, setNow] = useState(new Date());
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const notificationRef = useRef(null);
 
@@ -148,6 +150,20 @@ function Navbar() {
 
   });
 
+  const handleGenerateReport = async () => {
+    if (isGeneratingReport) return;
+    setIsGeneratingReport(true);
+    try {
+      await generateReport();
+      toast.success("Live security report downloaded.");
+    } catch (error) {
+      console.error("Report generation failed", error);
+      toast.error(`Report generation failed: ${error.message}`);
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  };
+
   return (
 
     <>
@@ -180,12 +196,13 @@ function Navbar() {
 
           <button
             className="report-btn"
-            onClick={generateReport}
+            onClick={handleGenerateReport}
+            disabled={isGeneratingReport}
           >
 
             <FaDownload />
 
-            Download Report
+            {isGeneratingReport ? "Generating..." : "Download Report"}
 
           </button>
 
