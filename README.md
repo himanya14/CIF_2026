@@ -56,7 +56,6 @@ CIF_2026/
 ## Installation
 
 ```powershell
-cd "C:\Users\Avishi Bahuguna\Documents\AI_Watchtower\CIF_2026"
 npm install
 ```
 
@@ -92,6 +91,7 @@ Open the Vite address, normally [http://localhost:5173](http://localhost:5173).
 Open [http://localhost:4000/api/health](http://localhost:4000/api/health).
 
 The response should include:
+
 
 ```json
 {
