@@ -1,21 +1,110 @@
 import "../styles/Charts.css";
-import { FaGlobeAmericas } from "react-icons/fa";
 
-const threats = [
-  { top: "34%", left: "18%", type: "critical" },
-  { top: "23%", left: "43%", type: "warning" },
-  { top: "52%", left: "56%", type: "secure" },
-  { top: "37%", left: "81%", type: "critical" },
-];
+import {
+  FaShieldAlt,
+  FaUserShield,
+  FaLock,
+  FaCreditCard,
+  FaExclamationTriangle,
+  FaKey,
+} from "react-icons/fa";
 
-function ThreatMap() {
+const categoryIcons = {
+  "Prompt Injection": <FaExclamationTriangle />,
+  Credentials: <FaKey />,
+  "Personal Identity": <FaUserShield />,
+  "Personal Contact Data": <FaUserShield />,
+  "Financial Identity": <FaCreditCard />,
+  Honeytoken: <FaLock />,
+};
+
+function getRiskClass(risk) {
+  if (risk >= 90) return "critical";
+  if (risk >= 70) return "elevated";
+  return "lower";
+}
+
+function ThreatMap({ liveData = {} }) {
+  const points = Array.isArray(liveData?.points)
+    ? liveData.points
+    : [];
+
+  const summary = liveData?.summary || {
+    critical: 0,
+    warning: 0,
+    secure: 0,
+  };
+
+  const defaultDepartments = [
+    "IT",
+    "HR",
+    "Finance",
+    "General",
+  ];
+
+  const defaultCategories = [
+    "Financial Identity",
+    "Personal Identity",
+    "Personal Contact Data",
+    "Honeytoken",
+    "Credentials",
+    "Prompt Injection",
+  ];
+
+  const departments =
+    points.length > 0
+      ? [
+          ...new Set(
+            points
+              .map((item) => item.department)
+              .filter(Boolean)
+          ),
+        ]
+      : defaultDepartments;
+
+  const categories =
+    points.length > 0
+      ? [
+          ...new Set(
+            points
+              .map((item) => item.category)
+              .filter(Boolean)
+          ),
+        ]
+      : defaultCategories;
+
+  const getCell = (department, category) => {
+    return (
+      points.find(
+        (item) =>
+          item.department === department &&
+          item.category === category
+      ) || null
+    );
+  };
+
+  const totalThreats = points.reduce(
+    (sum, item) =>
+      sum + Number(item.count || 0),
+    0
+  );
+
+  const criticalCount =
+    Number(summary.critical || 0);
+
   return (
-    <div className="map-card">
-
+    <div className="map-card threat-category-card">
       <div className="card-header">
         <div className="map-heading">
-          <FaGlobeAmericas />
-          <h2>Global Threat Map</h2>
+          <FaShieldAlt />
+
+          <div>
+            <h2>Threat Heatmap</h2>
+
+            <span className="chart-subtitle">
+              Live threat concentration by department and category
+            </span>
+          </div>
         </div>
 
         <span className="live-badge">
@@ -23,48 +112,138 @@ function ThreatMap() {
         </span>
       </div>
 
-      <div className="world-map">
+      <div className="threat-summary">
+        <div>
+          <strong>{totalThreats}</strong>
+          <span>Threat Events</span>
+        </div>
 
-        <img
-          src="https://upload.wikimedia.org/wikipedia/commons/8/80/World_map_-_low_resolution.svg"
-          alt="world"
-          className="world-image"
-        />
+        <div>
+          <strong>{categories.length}</strong>
+          <span>Categories</span>
+        </div>
 
-        {threats.map((t, i) => (
+        <div>
+          <strong>{criticalCount}</strong>
+          <span>Critical</span>
+        </div>
+      </div>
+
+      <div
+        className="heatmap-grid"
+        style={{
+          "--heatmap-columns": `180px repeat(${categories.length}, minmax(90px, 1fr))`,
+        }}
+      >
+        <div className="heatmap-header-row">
+          <div className="heatmap-department-title">
+            DEPARTMENT
+          </div>
+
+          {categories.map((category) => (
+            <div
+              className="heatmap-category"
+              key={category}
+              title={category}
+            >
+              <div className="heatmap-category-icon">
+                {categoryIcons[category] || (
+                  <FaShieldAlt />
+                )}
+              </div>
+
+              <span>{category}</span>
+            </div>
+          ))}
+        </div>
+
+        {departments.map((department) => (
           <div
-            key={i}
-            className={`threat-point ${t.type}`}
-            style={{
-              top: t.top,
-              left: t.left,
-            }}
+            className="heatmap-data-row"
+            key={department}
           >
-            <span></span>
+            <div className="heatmap-department">
+              {department}
+            </div>
+
+            {categories.map((category) => {
+              const cell = getCell(
+                department,
+                category
+              );
+
+              const count = Number(
+                cell?.count || 0
+              );
+
+              const risk = Number(
+                cell?.risk || 0
+              );
+
+              if (!cell || count <= 0) {
+                return (
+                  <div
+                    className="heatmap-dot-cell empty"
+                    key={`${department}-${category}`}
+                  />
+                );
+              }
+
+              const riskClass =
+                getRiskClass(risk);
+
+              return (
+                <div
+                  className="heatmap-dot-cell"
+                  key={`${department}-${category}`}
+                >
+                  <div
+                    className={`heatmap-dot ${riskClass}`}
+                  >
+                    <div className="heatmap-tooltip">
+                      <strong>
+                        {department}
+                      </strong>
+
+                      <span>
+                        {category}
+                      </span>
+
+                      <small>
+                        {count}{" "}
+                        {count === 1
+                          ? "event"
+                          : "events"}
+                      </small>
+
+                      <small>
+                        Risk: {risk}%
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ))}
-
       </div>
 
-      <div className="map-legend">
-
-        <div>
-          <span className="legend critical"></span>
+      <div className="threat-risk-legend">
+        <span>
+          <i className="high-risk-dot" />
           Critical
-        </div>
+        </span>
 
-        <div>
-          <span className="legend warning"></span>
-          Warning
-        </div>
+        <span>
+          <i className="medium-risk-dot" />
+          Elevated
+        </span>
 
-        <div>
-          <span className="legend secure"></span>
-          Secure
-        </div>
-
+        <span>
+          <i className="low-risk-dot" />
+          Lower
+        </span>
       </div>
-
     </div>
   );
 }

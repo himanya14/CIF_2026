@@ -1,265 +1,484 @@
-.chart-card{
-    background:#131f34;
-    border:1px solid #264b72;
-    border-radius:20px;
-    padding:22px;
-    box-shadow:0 0 25px rgba(0,0,0,.25);
+.chart-card {
+    background: #131f34;
+    border: 1px solid #264b72;
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.25);
 }
 
-.chart-card h2{
-    color:white;
-    font-size:24px;
-    margin-bottom:20px;
+.chart-card h2 {
+    color: white;
+    font-size: 24px;
+    margin-bottom: 20px;
 }
 
-.chart-grid{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:25px;
-    margin:28px 35px;
+.chart-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 25px;
+    margin-top: 28px;
 }
 
-/* ---------- Threat Map ---------- */
-
-.map-card{
-    background:#111d31;
-    border:1px solid #223b5b;
-    border-radius:20px;
-    padding:22px;
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
 }
 
-.world-map{
-    position:relative;
-    height:340px;
-    background:#081321;
-    border-radius:18px;
-    overflow:hidden;
+.map-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.world-image{
-    position:absolute;
-    inset:0;
-    width:100%;
-    height:100%;
-    object-fit:contain;
-    opacity:.15;
-    filter:hue-rotate(170deg) brightness(.8);
+.map-heading svg {
+    color: #00d4ff;
+    font-size: 24px;
 }
 
-.threat-point{
-    position:absolute;
-    width:14px;
-    height:14px;
-    background:#ff5252;
-    border-radius:50%;
-    transform:translate(-50%,-50%);
-    box-shadow:0 0 20px #ff5252;
+.map-heading h2 {
+    color: white;
+    margin: 0;
+    font-size: 22px;
 }
 
-.threat-point span{
-    position:absolute;
-    inset:-18px;
-    border:2px solid rgba(255,82,82,.5);
-    border-radius:50%;
-    animation:radar 2.5s infinite;
+.live-badge {
+    background: #ff5252;
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
 }
 
-@keyframes radar{
-
-0%{
-transform:scale(.4);
-opacity:1;
+.map-card {
+    background: #111d31;
+    border: 1px solid #223b5b;
+    border-radius: 20px;
+    padding: 22px;
+    min-height: 340px;
 }
 
-100%{
-transform:scale(2.8);
-opacity:0;
+.threat-category-card {
+    display: flex;
+    flex-direction: column;
 }
 
-}
-.card-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:18px;
+.threat-summary {
+    display: flex;
+    gap: 45px;
+    margin: 5px 0 20px;
 }
 
-.map-heading{
-    display:flex;
-    align-items:center;
-    gap:12px;
+.threat-summary div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
-.map-heading svg{
-    color:#00d4ff;
-    font-size:24px;
+.threat-summary strong {
+    color: white;
+    font-size: 20px;
 }
 
-.map-heading h2{
-    color:white;
-    margin:0;
-    font-size:24px;
+.threat-summary span {
+    color: #6f88a8;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.live-badge{
-    background:#ff5252;
-    color:white;
-    padding:5px 12px;
-    border-radius:20px;
-    font-size:12px;
-    font-weight:700;
+.threat-risk-legend {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 28px;
+    margin-top: 24px;
+    color: #8ea8cf;
+    font-size: 11px;
 }
 
-.threat-point.warning{
-    background:#ffb000;
-    box-shadow:0 0 18px #ffb000;
+.threat-risk-legend span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.threat-point.secure{
-    background:#00e676;
-    box-shadow:0 0 18px #00e676;
+.threat-risk-legend i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
 }
 
-.map-legend{
-    display:flex;
-    justify-content:center;
-    gap:30px;
-    margin-top:18px;
-    color:#9fb2cc;
-    font-size:14px;
+.high-risk-dot {
+    background: #ff5252;
+    box-shadow: 0 0 8px rgba(255, 82, 82, 0.5);
 }
 
-.legend{
-    display:inline-block;
-    width:10px;
-    height:10px;
-    border-radius:50%;
-    margin-right:8px;
+.medium-risk-dot {
+    background: #ffb000;
+    box-shadow: 0 0 8px rgba(255, 176, 0, 0.45);
 }
 
-.legend.critical{
-    background:#ff5252;
+.low-risk-dot {
+    background: #22e37d;
+    box-shadow: 0 0 8px rgba(34, 227, 125, 0.45);
 }
 
-.legend.warning{
-    background:#ffb000;
+.chart-empty {
+    flex: 1;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #8ea8cf;
+    border: 1px dashed #294867;
+    border-radius: 14px;
+    text-align: center;
 }
 
-.legend.secure{
-    background:#00e676;
-}
-.custom-tooltip{
-
-    background:#14233a;
-
-    border:1px solid #28456c;
-
-    border-radius:16px;
-
-    padding:18px;
-
-    box-shadow:0 0 25px rgba(0,0,0,.35);
-
+.threat-empty svg {
+    font-size: 32px;
+    color: #00d4ff;
+    margin-bottom: 10px;
 }
 
-.custom-tooltip h3{
-
-    color:white;
-
-    margin-bottom:12px;
-
-    font-size:24px;
-
+.threat-empty p {
+    color: white;
+    margin: 0 0 5px;
+    font-weight: 600;
 }
 
-.custom-tooltip p{
-
-    margin:10px 0;
-
-    font-size:20px;
-
-    font-weight:600;
-
+.threat-empty span {
+    font-size: 11px;
 }
 
-.custom-tooltip .allowed{
-
-    color:#4d8cff;
-
+.custom-tooltip {
+    background: #14233a;
+    border: 1px solid #28456c;
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.35);
 }
 
-.custom-tooltip .blocked{
-
-    color:#ff5252;
-
+.custom-tooltip h3 {
+    color: white;
+    margin-bottom: 12px;
+    font-size: 18px;
 }
 
-.custom-tooltip .sanitized{
-
-    color:#2ed4bf;
-
+.custom-tooltip p {
+    margin: 10px 0;
+    font-size: 15px;
+    font-weight: 600;
 }
 
-.recharts-default-legend{
-
-    padding-bottom:15px !important;
-
+.custom-tooltip .allowed {
+    color: #4d8cff;
 }
 
-.recharts-legend-item text{
-
-    fill:white !important;
-
-    font-size:15px;
-
+.custom-tooltip .blocked {
+    color: #ff5252;
 }
 
-.recharts-cartesian-grid line{
-
-    stroke:#233d5b;
-
+.custom-tooltip .sanitized {
+    color: #2ed4bf;
 }
 
-.recharts-tooltip-cursor{
-
-    stroke:white !important;
-
-    stroke-width:1.5;
-
-}
-.chart-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:20px;
+.recharts-default-legend {
+    padding-bottom: 15px !important;
 }
 
-.chart-filter{
-    display:flex;
-    gap:10px;
+.recharts-legend-item text {
+    fill: white !important;
+    font-size: 13px;
 }
 
-.chart-filter button{
-    background:#162742;
-    border:1px solid #28466d;
-    color:#9fb2cc;
-    padding:8px 16px;
-    border-radius:10px;
-    cursor:pointer;
-    transition:.3s;
-    font-weight:600;
+.recharts-cartesian-grid line {
+    stroke: #233d5b;
 }
 
-.chart-filter button:hover{
-    border-color:#00d4ff;
-    color:white;
+.recharts-tooltip-cursor {
+    stroke: white !important;
+    stroke-width: 1.5;
 }
 
-.chart-filter .active{
-    background:#00d4ff;
-    color:#081321;
-    border-color:#00d4ff;
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
-.chart-subtitle{ color:#8ea8cf; font-size:13px; }
-.chart-empty{ height:360px; display:grid; place-items:center; color:#8ea8cf; border:1px dashed #294867; border-radius:14px; }
+.chart-filter {
+    display: flex;
+    gap: 10px;
+}
+
+.chart-filter button {
+    background: #162742;
+    border: 1px solid #28466d;
+    color: #9fb2cc;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.3s;
+    font-weight: 600;
+}
+
+.chart-filter button:hover {
+    border-color: #00d4ff;
+    color: white;
+}
+
+.chart-filter .active {
+    background: #00d4ff;
+    color: #081321;
+    border-color: #00d4ff;
+}
+
+.chart-subtitle {
+    color: #8ea8cf;
+    font-size: 11px;
+    display: block;
+    margin-top: 3px;
+}
+
+.heatmap-grid {
+    width: 100%;
+    margin-top: 22px;
+}
+
+.heatmap-header-row,
+.heatmap-data-row {
+    display: grid;
+    grid-template-columns: var(--heatmap-columns);
+    width: 100%;
+}
+
+.heatmap-header-row {
+    min-height: 88px;
+    align-items: center;
+}
+
+.heatmap-data-row {
+    min-height: 74px;
+    align-items: center;
+}
+
+.heatmap-department-title {
+    padding-left: 6px;
+    color: #7892b7;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.heatmap-category {
+    height: 88px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 5px;
+    text-align: center;
+    color: #8ea8cf;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.heatmap-category-icon {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7594bb;
+    font-size: 19px;
+}
+
+.heatmap-category span {
+    max-width: 120px;
+}
+
+.heatmap-department {
+    padding-left: 6px;
+    color: #e7eef8;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.heatmap-dot-cell {
+    height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.heatmap-dot-cell.empty {
+    visibility: hidden;
+}
+
+.heatmap-dot {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.heatmap-dot:hover {
+    transform: scale(1.25);
+    z-index: 20;
+}
+
+.heatmap-dot.critical {
+    background: #ff5252;
+    box-shadow:
+        0 0 0 6px rgba(255, 82, 82, 0.08),
+        0 0 18px rgba(255, 82, 82, 0.45);
+}
+
+.heatmap-dot.elevated {
+    background: #ffb000;
+    box-shadow:
+        0 0 0 6px rgba(255, 176, 0, 0.08),
+        0 0 18px rgba(255, 176, 0, 0.4);
+}
+
+.heatmap-dot.lower {
+    background: #22e37d;
+    box-shadow:
+        0 0 0 6px rgba(34, 227, 125, 0.08),
+        0 0 18px rgba(34, 227, 125, 0.4);
+}
+
+.heatmap-tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 14px);
+    transform: translateX(-50%);
+    width: 170px;
+    padding: 12px 14px;
+    background: #14233a;
+    border: 1px solid #315174;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+        opacity 0.15s ease,
+        visibility 0.15s ease;
+    z-index: 100;
+}
+
+.heatmap-dot:hover .heatmap-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.heatmap-tooltip::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #315174;
+}
+
+.heatmap-tooltip strong {
+    color: #ffffff;
+    font-size: 12px;
+}
+
+.heatmap-tooltip span {
+    color: #8ea8cf;
+    font-size: 10px;
+    line-height: 1.3;
+}
+
+.heatmap-tooltip small {
+    color: #d3deed;
+    font-size: 10px;
+}
+
+.insight-title > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.insight-empty {
+    min-height: 190px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: #8290a5;
+}
+
+.insight-empty svg {
+    font-size: 28px;
+    margin-bottom: 12px;
+}
+
+.insight-empty h3 {
+    margin: 0 0 8px;
+    color: #dbe4f0;
+}
+
+.insight-empty p {
+    margin: 0;
+    max-width: 320px;
+    line-height: 1.5;
+}
+
+.insight-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+@media (max-width: 900px) {
+    .heatmap-grid {
+        overflow-x: auto;
+    }
+
+    .heatmap-header-row,
+    .heatmap-data-row {
+        min-width: 760px;
+    }
+}
+
+@media (max-width: 768px) {
+    .chart-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .threat-summary {
+        gap: 25px;
+    }
+
+    .threat-risk-legend {
+        gap: 12px;
+    }
+
+    .heatmap-header-row,
+    .heatmap-data-row {
+        min-width: 760px;
+    }
+}

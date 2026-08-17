@@ -7,73 +7,84 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 
-function AIInsights() {
+const icons = {
+  critical: <FaExclamationTriangle />,
+  warning: <FaExclamationTriangle />,
+  success: <FaCheckCircle />,
+  info: <FaLock />,
+};
+
+function AIInsights({
+  liveData = [],
+}) {
+  const insights = Array.isArray(
+    liveData
+  )
+    ? liveData
+    : [];
+
   return (
     <div className="insight-card">
-
       <div className="insight-title">
         <FaShieldAlt />
-        <h2>AI Security Insights</h2>
-      </div>
-
-      <div className="insight-item success">
-
-        <div className="insight-icon">
-          <FaCheckCircle />
-        </div>
 
         <div>
+          <h2>
+            AI Security Insights
+          </h2>
 
-          <h3>Security Posture Improved</h3>
-
-          <p>
-            Overall protection increased by
-            <strong> 8% </strong>
-            this week.
-          </p>
-
+          <span className="live-badge">
+            LIVE
+          </span>
         </div>
-
       </div>
 
-      <div className="insight-item warning">
+      {insights.length === 0 ? (
+        <div className="insight-empty">
+          <FaShieldAlt />
 
-        <div className="insight-icon">
-          <FaExclamationTriangle />
-        </div>
-
-        <div>
-
-          <h3>Finance Login Anomaly</h3>
+          <h3>
+            Monitoring Security Activity
+          </h3>
 
           <p>
-            12 suspicious login attempts were blocked.
+            Insights will update
+            automatically as new security
+            events are detected.
           </p>
-
         </div>
+      ) : (
+        <div className="insight-list">
+          {insights.map(
+            (insight, index) => {
+              const type =
+                insight.type || "info";
 
-      </div>
+              return (
+                <div
+                  className={`insight-item ${type}`}
+                  key={`${insight.title}-${index}`}
+                >
+                  <div className="insight-icon">
+                    {icons[type] ||
+                      icons.info}
+                  </div>
 
-      <div className="insight-item info">
+                  <div>
+                    <h3>
+                      {insight.title}
+                    </h3>
 
-        <div className="insight-icon">
-          <FaLock />
+                    <p>
+                      {insight.message}
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+          )}
         </div>
-
-        <div>
-
-          <h3>MFA Recommendation</h3>
-
-          <p>
-            Enable MFA for
-            <strong> 24 </strong>
-            remaining users.
-          </p>
-
-        </div>
-
-      </div>
-
+      )}
     </div>
   );
 }

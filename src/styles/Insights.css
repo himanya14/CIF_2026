@@ -1,134 +1,201 @@
-.insight-card{
+/* =========================================================
+   AI SECURITY INSIGHTS
+========================================================= */
 
-    background:#131f34;
-
-    border:1px solid #264b72;
-
-    border-radius:20px;
-
-    padding:24px;
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:18px;
-
-    height:100%;
+.insight-card {
+    background: #131f34;
+    border: 1px solid #264b72;
+    border-radius: 20px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    box-sizing: border-box;
 }
 
-.insight-title{
 
-    display:flex;
+/* =========================================================
+   TITLE
+========================================================= */
 
-    align-items:center;
-
-    gap:12px;
-
-    margin-bottom:8px;
+.insight-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 18px;
 }
 
-.insight-title svg{
-
-    color:#00d4ff;
-
-    font-size:28px;
+.insight-title > svg {
+    color: #00d4ff;
+    font-size: 26px;
+    flex-shrink: 0;
 }
 
-.insight-title h2{
-
-    color:white;
-
-    font-size:28px;
-
-    margin:0;
+.insight-title > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
-.insight-item{
-
-    display:flex;
-
-    gap:16px;
-
-    align-items:flex-start;
-
-    padding:18px;
-
-    border-radius:16px;
-
-    transition:.25s;
+.insight-title h2 {
+    color: white;
+    font-size: 24px;
+    margin: 0;
 }
 
-.insight-item:hover{
-
-    transform:translateY(-2px);
-
-    background:#1b2a42;
+.insight-live {
+    color: #00e676;
+    font-size: 9px;
+    letter-spacing: 1.4px;
+    font-weight: 700;
 }
 
-.insight-icon{
 
-    width:48px;
+/* =========================================================
+   INSIGHT LIST
+========================================================= */
 
-    height:48px;
-
-    border-radius:14px;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    font-size:20px;
-
-    flex-shrink:0;
+.insight-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
 }
 
-.success .insight-icon{
-
-    background:rgba(0,230,118,.15);
-
-    color:#00e676;
+.insight-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 16px;
+    border-radius: 14px;
+    background: #101c30;
+    border: 1px solid transparent;
+    transition: .25s ease;
 }
 
-.warning .insight-icon{
-
-    background:rgba(255,193,7,.15);
-
-    color:#ffc107;
+.insight-item:hover {
+    transform: translateY(-2px);
+    background: #182840;
+    border-color: #294a70;
 }
 
-.info .insight-icon{
 
-    background:rgba(0,212,255,.15);
+/* =========================================================
+   ICON
+========================================================= */
 
-    color:#00d4ff;
+.insight-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 17px;
+    flex-shrink: 0;
 }
 
-.insight-item h3{
 
-    margin:0 0 6px;
+/* SUCCESS */
 
-    color:white;
-
-    font-size:18px;
-
-    font-weight:600;
+.insight-item.success {
+    border-color: rgba(0, 230, 118, .12);
 }
 
-.insight-item p{
-
-    margin:0;
-
-    color:#9eb0c4;
-
-    line-height:1.6;
-
-    font-size:15px;
+.insight-item.success .insight-icon {
+    background: rgba(0, 230, 118, .12);
+    color: #00e676;
 }
 
-.insight-item strong{
 
-    color:white;
+/* WARNING */
+
+.insight-item.warning {
+    border-color: rgba(255, 193, 7, .12);
+}
+
+.insight-item.warning .insight-icon {
+    background: rgba(255, 193, 7, .12);
+    color: #ffc107;
+}
+
+
+/* INFO */
+
+.insight-item.info {
+    border-color: rgba(0, 212, 255, .12);
+}
+
+.insight-item.info .insight-icon {
+    background: rgba(0, 212, 255, .12);
+    color: #00d4ff;
+}
+
+
+/* =========================================================
+   TEXT
+========================================================= */
+
+.insight-item h3 {
+    margin: 0 0 5px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.insight-item p {
+    margin: 0;
+    color: #9eb0c4;
+    line-height: 1.55;
+    font-size: 13px;
+}
+
+.insight-item strong {
+    color: white;
+}
+
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.insight-footer {
+    margin-top: 15px;
+    padding-top: 14px;
+    border-top: 1px solid #233c5d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.insight-footer span {
+    color: #7188a8;
+    font-size: 11px;
+}
+
+.insight-footer strong {
+    color: #00d4ff;
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 600px) {
+
+    .insight-card {
+        padding: 18px;
+    }
+
+    .insight-title h2 {
+        font-size: 20px;
+    }
+
+    .insight-item {
+        padding: 13px;
+    }
+
 }

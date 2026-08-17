@@ -1,166 +1,2333 @@
-import http from "node:http";
-import process from "node:process";
-import { randomUUID } from "node:crypto";
-import blockScenarios from "../src/data/blockScenarios.js";
-import { audit, createRedTeamTest, databasePath, ensureRun, getAuditLog, getDashboard, getUser, listIncidents, listRedTeamTests, saveIncident, saveRedTeamResult, saveScan, updateIncidentStatus } from "./database.js";
+import { DatabaseSync } from "node:sqlite";
+import { mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import {
+  randomUUID,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual,
+} from "node:crypto";
 
-const PORT = Number(process.env.PORT || 4000);
-const startedAt = new Date().toISOString();
+import { redTeamTests as seededRedTeamTests } from "../src/data/redTeamData.js";
 
-function json(res, status, value) {
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type,X-User-Id", "Access-Control-Allow-Methods": "GET,POST,OPTIONS" });
-  res.end(status === 204 ? undefined : JSON.stringify(value));
+const here = dirname(fileURLToPath(import.meta.url));
+const dataDirectory = join(here, "data");
+
+mkdirSync(dataDirectory, { recursive: true });
+
+export const databasePath = join(
+  dataDirectory,
+  "watchtower.db"
+);
+
+export const db = new DatabaseSync(databasePath);
+
+db.exec(`
+  PRAGMA journal_mode = WAL;
+  PRAGMA foreign_keys = ON;
+
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    department TEXT NOT NULL,
+    role TEXT NOT NULL,
+    password_hash TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    last_used_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS prompt_scans (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    prompt TEXT NOT NULL,
+    sanitized_text TEXT,
+    status TEXT NOT NULL,
+    label TEXT NOT NULL,
+    category TEXT NOT NULL,
+    risk_score INTEGER NOT NULL,
+    confidence REAL NOT NULL,
+    policy TEXT NOT NULL,
+    response TEXT NOT NULL,
+    detected_department TEXT NOT NULL DEFAULT 'General',
+    incident_id TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS incidents (
+    id TEXT PRIMARY KEY,
+    scenario_key TEXT NOT NULL,
+    scan_id TEXT REFERENCES prompt_scans(id),
+    user_id TEXT REFERENCES users(id),
+    title TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    category TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'UNREVIEWED',
+    payload_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS red_team_runs (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    total_tests INTEGER NOT NULL DEFAULT 0,
+    passed_tests INTEGER NOT NULL DEFAULT 0,
+    started_at TEXT NOT NULL,
+    completed_at TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS red_team_tests (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    expected_action TEXT NOT NULL,
+    is_threat INTEGER NOT NULL,
+    direction TEXT NOT NULL DEFAULT 'INPUT',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    source TEXT NOT NULL DEFAULT 'CUSTOM',
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS red_team_results (
+    id TEXT PRIMARY KEY,
+    run_id TEXT NOT NULL REFERENCES red_team_runs(id),
+    test_id TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    passed INTEGER NOT NULL,
+    outcome TEXT NOT NULL,
+    risk_score INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_events (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_scans_created
+    ON prompt_scans(created_at);
+
+  CREATE INDEX IF NOT EXISTS idx_scans_status
+    ON prompt_scans(status);
+
+  CREATE INDEX IF NOT EXISTS idx_scans_department
+    ON prompt_scans(detected_department);
+
+  CREATE INDEX IF NOT EXISTS idx_scans_category
+    ON prompt_scans(category);
+
+  CREATE INDEX IF NOT EXISTS idx_incidents_created
+    ON incidents(created_at);
+
+  CREATE INDEX IF NOT EXISTS idx_results_run
+    ON red_team_results(run_id);
+
+  CREATE INDEX IF NOT EXISTS idx_audit_created
+    ON audit_events(created_at);
+
+  CREATE INDEX IF NOT EXISTS idx_sessions_user
+    ON sessions(user_id);
+
+  CREATE INDEX IF NOT EXISTS idx_sessions_expiry
+    ON sessions(expires_at);
+`);
+
+/*
+|--------------------------------------------------------------------------
+| DATABASE MIGRATIONS
+|--------------------------------------------------------------------------
+*/
+
+const userColumns = db
+  .prepare("PRAGMA table_info(users)")
+  .all();
+
+if (
+  !userColumns.some(
+    (column) =>
+      column.name === "password_hash"
+  )
+) {
+  db.exec(`
+    ALTER TABLE users
+    ADD COLUMN password_hash TEXT
+  `);
 }
 
-function readBody(req) {
-  return new Promise((resolve, reject) => {
-    let raw = "";
-    req.on("data", chunk => { raw += chunk; if (raw.length > 1_000_000) reject(new Error("Request too large")); });
-    req.on("end", () => { try { resolve(raw ? JSON.parse(raw) : {}); } catch { reject(new Error("Invalid JSON")); } });
-    req.on("error", reject);
-  });
+const scanColumns = db
+  .prepare("PRAGMA table_info(prompt_scans)")
+  .all();
+
+if (
+  !scanColumns.some(
+    (column) =>
+      column.name === "detected_department"
+  )
+) {
+  db.exec(`
+    ALTER TABLE prompt_scans
+    ADD COLUMN detected_department
+    TEXT NOT NULL DEFAULT 'General'
+  `);
 }
 
-function classify(prompt) {
-  const departmentRules = [
-    { department: "Finance", re: /\b(cvv|card number|credit card|debit card|pan|bank|account number|ifsc|upi|payment|salary|payroll|tax|invoice|refund|transaction|loan|investment)\b/i },
-    { department: "IT", re: /\b(api key|access key|secret key|password|credential|token|aws|azure|database|server|source code|github|gitlab|ssh|private key|deployment|devops|cloud|jailbreak|prompt injection)\b/i },
-    { department: "HR", re: /\b(aadhaar|aadhar|employee|candidate|resume|recruitment|leave|attendance|onboarding|date of birth|dob|offer letter|performance review)\b/i },
-    { department: "Legal", re: /\b(contract|nda|legal|lawsuit|litigation|agreement|clause|compliance|regulation|consent|policy violation)\b/i },
-    { department: "Operations", re: /\b(vendor|supplier|inventory|logistics|shipment|warehouse|procurement|operations|supply chain)\b/i },
-    { department: "Marketing", re: /\b(campaign|marketing|advertisement|customer list|lead list|social media|brand|promotion|seo)\b/i },
-  ];
-  const detectedDepartment = departmentRules.find(item => item.re.test(prompt))?.department || "General";
-  const containsAadhaar = /(?:aadhaar|aadhar)[^\d]{0,24}\d{4}\s?\d{4}\s?\d{4}/i.test(prompt);
-  const containsPan = /\b[A-Z]{5}\d{4}[A-Z]\b/i.test(prompt);
-  const containsPhone = /(?:\+91[\s-]?)?[6-9]\d{9}\b/.test(prompt);
-  const containsEmail = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i.test(prompt);
+db.exec(`
+  UPDATE prompt_scans
+  SET detected_department =
+    CASE
+      WHEN lower(prompt) LIKE '%cvv%'
+        OR lower(prompt) LIKE '%card number%'
+        OR lower(prompt) LIKE '%pan %'
+        OR lower(prompt) LIKE '%payment%'
+        OR lower(prompt) LIKE '%bank%'
+        OR lower(prompt) LIKE '%salary%'
+        OR lower(prompt) LIKE '%tax%'
+        THEN 'Finance'
 
-  if (containsAadhaar || containsPan || containsPhone || containsEmail) {
-    const detectedItems = [
-      containsAadhaar && "Aadhaar Number",
-      containsPan && "PAN Number",
-      containsPhone && "Phone Number",
-      containsEmail && "Email Address",
-    ].filter(Boolean);
-    const category = detectedItems.length > 1
-      ? "Sensitive Personal Data"
-      : containsPan
-        ? "Financial Identity"
-        : containsAadhaar
-          ? "Personal Identity"
-          : "Personal Contact Data";
-    return {
-      department: containsAadhaar ? "HR" : containsPan ? "Finance" : detectedDepartment === "General" ? "HR" : detectedDepartment,
-      status: "cleaned",
-      category,
-      riskScore: containsAadhaar || containsPan ? 94 : 82,
-      confidence: 99,
-      policy: "Multi-field Personal Data Protection",
-      scenarioKey: containsPan && !containsAadhaar ? "pan-consent" : "aadhaar",
-      label: "Cleaned Up",
-      response: `${detectedItems.join(", ")} ${detectedItems.length === 1 ? "was" : "were"} removed before processing.`,
-      sanitize: value => value
-        .replace(/\b\d{4}\s?\d{4}\s?\d{4}\b/g, "[AADHAAR REDACTED]")
-        .replace(/\b[A-Z]{5}\d{4}[A-Z]\b/gi, "[PAN REDACTED]")
-        .replace(/(?:\+91[\s-]?)?[6-9]\d{9}\b/g, "[PHONE REDACTED]")
-        .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[EMAIL REDACTED]"),
-    };
+      WHEN lower(prompt) LIKE '%api key%'
+        OR lower(prompt) LIKE '%password%'
+        OR lower(prompt) LIKE '%token%'
+        OR lower(prompt) LIKE '%aws%'
+        OR lower(prompt) LIKE '%database%'
+        OR lower(prompt) LIKE '%server%'
+        OR lower(prompt) LIKE '%github%'
+        OR lower(prompt) LIKE '%jailbreak%'
+        OR lower(prompt) LIKE '%credential%'
+        THEN 'IT'
+
+      WHEN lower(prompt) LIKE '%aadhaar%'
+        OR lower(prompt) LIKE '%aadhar%'
+        OR lower(prompt) LIKE '%employee%'
+        OR lower(prompt) LIKE '%candidate%'
+        OR lower(prompt) LIKE '%resume%'
+        OR lower(prompt) LIKE '%onboarding%'
+        THEN 'HR'
+
+      WHEN lower(prompt) LIKE '%contract%'
+        OR lower(prompt) LIKE '%legal%'
+        OR lower(prompt) LIKE '%nda%'
+        OR lower(prompt) LIKE '%compliance%'
+        THEN 'Legal'
+
+      WHEN lower(prompt) LIKE '%vendor%'
+        OR lower(prompt) LIKE '%inventory%'
+        OR lower(prompt) LIKE '%logistics%'
+        OR lower(prompt) LIKE '%shipment%'
+        THEN 'Operations'
+
+      WHEN lower(prompt) LIKE '%campaign%'
+        OR lower(prompt) LIKE '%marketing%'
+        OR lower(prompt) LIKE '%advertisement%'
+        OR lower(prompt) LIKE '%lead list%'
+        THEN 'Marketing'
+
+      ELSE 'General'
+    END
+  WHERE detected_department = 'General'
+`);
+
+/*
+|--------------------------------------------------------------------------
+| AUTHENTICATION
+|--------------------------------------------------------------------------
+|
+| Passwords are stored as:
+|
+|   scrypt$salt$hash
+|
+| Plain-text passwords are never stored.
+|
+*/
+
+const PASSWORD_KEY_LENGTH = 64;
+const SESSION_DURATION_MS =
+  8 * 60 * 60 * 1000;
+
+const now = () =>
+  new Date().toISOString();
+
+function hashPassword(password) {
+  if (
+    typeof password !== "string" ||
+    !password.length
+  ) {
+    throw new Error(
+      "Password is required."
+    );
   }
-  const rules = [
-    { re: /honeytoken|sk-honeypot|AWS_TEST_SECRET_001/i, department: "IT", status: "blocked", category: "Honeytoken", riskScore: 100, confidence: 100, policy: "Honeytoken Intrusion Detection", scenarioKey: "honeytoken", label: "Blocked", response: "A decoy credential was triggered; this session has been flagged." },
-    { re: /(?:card|visa|mastercard|cvv)[\s\S]{0,60}(?:\d[ -]*?){3,16}|\b(?:\d[ -]*?){13,19}\b[\s\S]{0,30}\bcvv\b/i, department: "Finance", status: "blocked", category: "Financial Data", riskScore: 99, confidence: 99.9, policy: "PCI Cardholder Data Protection", scenarioKey: "card-data", label: "Blocked", response: "Payment-card information was detected and the request was blocked." },
-    { re: /sk-[\w-]{8,}|AKIA[A-Z0-9]{12,}|gh[pousr]_[A-Za-z0-9_]{8,}|github_pat_[A-Za-z0-9_]{8,}|xox[baprs]-[A-Za-z0-9-]{8,}|AIza[A-Za-z0-9_-]{20,}|sk_(?:live|test)_[A-Za-z0-9]{8,}|eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}|(?:postgres|mysql|mongodb(?:\+srv)?):\/\/[^\s:]+:[^\s@]+@|api[ _-]?key\s*(?:[:=]|is)\s*\S+|-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/i, department: "IT", status: "blocked", category: "Credentials", riskScore: 99, confidence: 98, policy: "Credential Leakage Prevention", scenarioKey: "api-key", label: "Blocked", response: "A sensitive technical credential or access token was detected and the request was blocked." },
-    { re: /ignore (?:all|the) previous|reveal (?:the )?(?:system|confidential)|developer mode|jailbreak/i, department: "IT", status: "blocked", category: "Prompt Injection", riskScore: 95, confidence: 94, policy: "Prompt Injection Defence", scenarioKey: "prompt-injection", label: "Blocked", response: "A prompt-injection attempt was detected and blocked." },
-    { re: /password\s*(?:[:=]|is)\s*\S+|(?:username|user)\s*[:=]\s*\S+[\s\S]{0,40}password\s*(?:[:=]|is)\s*\S+/i, department: "IT", status: "blocked", category: "Credentials", riskScore: 97, confidence: 96, policy: "Database Credential Protection", scenarioKey: "api-key", label: "Blocked", response: "A password value was detected and the request was blocked." },
-  ];
-  const matchedRule = rules.find(rule => rule.re.test(prompt));
-  return matchedRule || { department: detectedDepartment, status: "allowed", category: "Safe Business Request", riskScore: 5, confidence: 96, policy: "Acceptable AI Usage", label: "Allowed", response: "Your request passed all security checks and was processed successfully." };
+
+  const salt =
+    randomBytes(16).toString("hex");
+
+  const derivedKey =
+    scryptSync(
+      password,
+      salt,
+      PASSWORD_KEY_LENGTH
+    );
+
+  return [
+    "scrypt",
+    salt,
+    derivedKey.toString("hex"),
+  ].join("$");
 }
 
-function createIncident(rule, prompt, user, scanId) {
-  const template = blockScenarios.find(item => item.id === rule.scenarioKey) || blockScenarios[0];
-  const templateData = { ...template };
-  delete templateData.user;
-  delete templateData.sourceApp;
-  const id = `INC-${Date.now()}-${randomUUID().slice(0, 6).toUpperCase()}`;
-  const createdAt = new Date().toISOString();
-  return { ...templateData, id, scenarioKey: rule.scenarioKey, blockId: id, prompt, department: rule.department, confidence: rule.confidence, category: rule.category, severity: rule.riskScore >= 95 ? "Critical" : "High", action: rule.status, createdAt, scanId };
-}
-
-function inspect(prompt, userId) {
-  const rule = classify(prompt);
-  const id = randomUUID();
-  const inspectedAt = new Date().toISOString();
-  const user = getUser(userId);
-  const shouldCreateIncident = rule.status !== "allowed";
-  const incidentId = shouldCreateIncident ? `pending-${id}` : null;
-  const result = { id, prompt, status: rule.status, label: rule.label, response: rule.response, category: rule.category, department: rule.department, riskScore: rule.riskScore, confidence: rule.confidence, policy: rule.policy, blockScenarioId: null, incidentId, sanitizedText: rule.sanitize?.(prompt) || null, originalText: rule.sanitize ? prompt : null, inspectedAt };
-  if (shouldCreateIncident) {
-    const incident = createIncident(rule, prompt, user, id);
-    result.incidentId = incident.id;
-    result.blockScenarioId = incident.id;
-    saveScan(result, user.id);
-    saveIncident(incident, id, user.id);
-    audit("PROMPT_FLAGGED", "prompt_scan", id, { status: result.status, category: result.category, department: result.department, riskScore: result.riskScore, incidentId: incident.id }, user.id);
-  } else {
-    saveScan(result, user.id);
-    audit("PROMPT_ALLOWED", "prompt_scan", id, { status: result.status, category: result.category, department: result.department, riskScore: result.riskScore }, user.id);
+function verifyPassword(
+  password,
+  storedHash
+) {
+  if (
+    typeof password !== "string" ||
+    !storedHash
+  ) {
+    return false;
   }
-  return result;
-}
 
-function simulate(test, runId) {
-  const decision = classify(test.prompt);
-  const actualAction = decision.category === "Honeytoken"
-    ? "ALERT"
-    : decision.status === "blocked"
-      ? "BLOCK"
-      : decision.status === "cleaned"
-        ? "SANITIZE"
-        : decision.status === "warning"
-          ? "WARN"
-          : "ALLOW";
-  const { confidence, riskScore, policy } = decision;
-  const detectedItems = decision.category === "Safe Business Request" ? [] : [decision.category];
-  let passed = false;
-  let outcome;
-  if (test.expectedAction === "ALLOW") {
-    passed = actualAction === "ALLOW";
-    outcome = passed ? "CORRECTLY_ALLOWED" : "FALSE_POSITIVE";
-  } else if (actualAction === test.expectedAction) {
-    passed = true;
-    outcome = "PROTECTED";
-  } else if (test.expectedAction === "BLOCK" && actualAction === "SANITIZE") {
-    passed = true;
-    outcome = "MITIGATED";
-  } else if (test.expectedAction === "BLOCK" && actualAction === "WARN") {
-    outcome = "PARTIAL_PROTECTION";
-  } else if (actualAction === "ALLOW") {
-    outcome = "SECURITY_GAP";
-  } else {
-    outcome = "PARTIAL_PROTECTION";
+  const parts =
+    String(storedHash).split("$");
+
+  if (
+    parts.length !== 3 ||
+    parts[0] !== "scrypt"
+  ) {
+    return false;
   }
-  return { id: `${runId}-${test.id}`, testId: test.id, simulationRunId: runId, source: "RED_TEAM", direction: test.direction || "INPUT", name: test.name, category: decision.category, severity: test.severity, department: decision.department, expectedAction: test.expectedAction, actualAction, outcome, passed, confidence, riskScore, policy, reason: `${policy} evaluated the custom prompt through the live firewall.`, detectedItems, reviewStatus: "UNREVIEWED", durationMs: 350, completedAt: new Date().toISOString() };
-}
 
-const server = http.createServer(async (req, res) => {
-  if (req.method === "OPTIONS") return json(res, 204, {});
-  const path = new URL(req.url, `http://${req.headers.host || "localhost"}`).pathname;
-  const userId = req.headers["x-user-id"] || "demo-user";
+  const [, salt, expectedHex] =
+    parts;
+
   try {
-    if (req.method === "GET" && path === "/api/health") return json(res, 200, { status: "ok", service: "AI Watch Tower API", database: "SQLite", databasePath, startedAt });
-    if (req.method === "GET" && path === "/api/dashboard") return json(res, 200, getDashboard());
-    if (req.method === "GET" && path === "/api/red-team/tests") return json(res, 200, { tests: listRedTeamTests() });
-    if (req.method === "POST" && path === "/api/red-team/tests") { const input = await readBody(req); if (!input.name?.trim() || !input.prompt?.trim() || !input.category?.trim() || !["ALLOW","BLOCK","SANITIZE","ALERT","WARN"].includes(input.expectedAction)) return json(res, 400, { error: "name, prompt, category and a valid expectedAction are required" }); return json(res, 201, { test: createRedTeamTest(input) }); }
-    if (req.method === "POST" && path === "/api/red-team/test") { const input = await readBody(req); if (!input.test?.id) return json(res, 400, { error: "test is required" }); const runId = input.simulationRunId || `run-${Date.now()}`; ensureRun(runId, listRedTeamTests().length); await new Promise(resolve => setTimeout(resolve, 350)); const result = simulate(input.test, runId); saveRedTeamResult(result); audit("RED_TEAM_TEST_COMPLETED", "red_team_result", result.id, { testId: result.testId, outcome: result.outcome, passed: result.passed, department: result.department }); return json(res, 200, result); }
-    if (req.method === "POST" && path === "/api/inspect") { const input = await readBody(req); if (!input.prompt?.trim()) return json(res, 400, { error: "prompt is required" }); return json(res, 200, inspect(input.prompt.trim(), input.userId || userId)); }
-    if (req.method === "GET" && path === "/api/incidents") return json(res, 200, { incidents: listIncidents() });
-    const action = path.match(/^\/api\/incidents\/([^/]+)\/(acknowledge|false-positive)$/);
-    if (req.method === "POST" && action) { const [, id, verb] = action; const status = verb === "acknowledge" ? "ACKNOWLEDGED" : "FALSE_POSITIVE_REPORTED"; if (!updateIncidentStatus(id, status)) return json(res, 404, { error: "Incident not found" }); audit("INCIDENT_REVIEWED", "incident", id, { reviewStatus: status }, userId); return json(res, 200, { id, reviewStatus: status }); }
-    if (req.method === "GET" && path === "/api/audit-log") return json(res, 200, { events: getAuditLog() });
-    return json(res, 404, { error: "Route not found" });
-  } catch (error) { console.error(error); return json(res, 500, { error: error.message || "Internal server error" }); }
-});
+    const expected =
+      Buffer.from(
+        expectedHex,
+        "hex"
+      );
 
-server.listen(PORT, () => console.log(`AI Watch Tower API running at http://localhost:${PORT}\nSQLite database: ${databasePath}`));
+    const actual =
+      scryptSync(
+        password,
+        salt,
+        expected.length
+      );
+
+    if (
+      actual.length !==
+      expected.length
+    ) {
+      return false;
+    }
+
+    return timingSafeEqual(
+      actual,
+      expected
+    );
+  } catch {
+    return false;
+  }
+}
+
+function hashSessionToken(token) {
+  return scryptSync(
+    token,
+    "watchtower-session-salt",
+    32
+  ).toString("hex");
+}
+
+/*
+|--------------------------------------------------------------------------
+| DEFAULT USERS
+|--------------------------------------------------------------------------
+|
+| These are development/demo accounts.
+|
+| IMPORTANT:
+| Set production passwords through environment variables before deployment.
+|
+| Default development credentials:
+|
+| User:
+|   analyst@finserve-demo.in
+|   Demo@123
+|
+| Admin:
+|   admin@finserve-demo.in
+|   Admin@123
+|
+*/
+
+const defaultUsers = [
+  {
+    id: "demo-user",
+    email: "analyst@finserve-demo.in",
+    name: "Demo Analyst",
+    department: "Finance",
+    role: "Security Analyst",
+    password:
+      process.env.DEMO_USER_PASSWORD ||
+      "Demo@123",
+  },
+
+  {
+    id: "hr-user",
+    email: "hr@finserve-demo.in",
+    name: "HR Reviewer",
+    department: "HR",
+    role: "HR Manager",
+    password:
+      process.env.HR_USER_PASSWORD ||
+      "Hr@123",
+  },
+
+  {
+    id: "engineering-user",
+    email: "engineer@finserve-demo.in",
+    name: "Demo Engineer",
+    department: "Engineering",
+    role: "Developer",
+    password:
+      process.env.ENGINEERING_USER_PASSWORD ||
+      "Engineer@123",
+  },
+
+  {
+    id: "admin-user",
+    email: "admin@finserve-demo.in",
+    name: "System Administrator",
+    department: "Security",
+    role: "Admin",
+    password:
+      process.env.ADMIN_PASSWORD ||
+      "Admin@123",
+  },
+];
+
+const insertUser = db.prepare(`
+  INSERT OR IGNORE INTO users
+  (
+    id,
+    email,
+    name,
+    department,
+    role,
+    password_hash,
+    created_at
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?)
+`);
+
+for (
+  const user of defaultUsers
+) {
+  insertUser.run(
+    user.id,
+    user.email,
+    user.name,
+    user.department,
+    user.role,
+    hashPassword(user.password),
+    now()
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| AUTH USER MIGRATION
+|--------------------------------------------------------------------------
+|
+| Existing users created by the previous database.js did not have
+| passwords. Give them credentials so existing accounts continue working.
+|
+*/
+
+const usersWithoutPasswords =
+  db
+    .prepare(`
+      SELECT id, email
+      FROM users
+      WHERE password_hash IS NULL
+         OR password_hash = ''
+    `)
+    .all();
+
+for (
+  const user of usersWithoutPasswords
+) {
+  let password =
+    "ChangeMe@123";
+
+  if (
+    user.email ===
+    "analyst@finserve-demo.in"
+  ) {
+    password =
+      process.env.DEMO_USER_PASSWORD ||
+      "Demo@123";
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET password_hash = ?
+    WHERE id = ?
+  `).run(
+    hashPassword(password),
+    user.id
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| AUTH HELPERS
+|--------------------------------------------------------------------------
+*/
+
+export function findUserByEmail(
+  email
+) {
+  if (
+    typeof email !== "string"
+  ) {
+    return null;
+  }
+
+  return (
+    db
+      .prepare(`
+        SELECT *
+        FROM users
+        WHERE lower(email) = lower(?)
+        LIMIT 1
+      `)
+      .get(email.trim()) ||
+    null
+  );
+}
+
+export function getUser(
+  id = "demo-user"
+) {
+  return (
+    db
+      .prepare(
+        "SELECT * FROM users WHERE id = ?"
+      )
+      .get(id) ||
+    db
+      .prepare(
+        "SELECT * FROM users LIMIT 1"
+      )
+      .get()
+  );
+}
+
+export function getPublicUser(
+  user
+) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    department: user.department,
+    role: user.role,
+    isAdmin:
+      String(user.role).toLowerCase() ===
+      "admin",
+    createdAt:
+      user.created_at,
+  };
+}
+
+export function authenticateUser(
+  email,
+  password
+) {
+  const user =
+    findUserByEmail(email);
+
+  if (!user) {
+    return null;
+  }
+
+  if (
+    !verifyPassword(
+      password,
+      user.password_hash
+    )
+  ) {
+    return null;
+  }
+
+  return user;
+}
+
+export function createSession(
+  userId
+) {
+  const user =
+    getUser(userId);
+
+  if (!user) {
+    throw new Error(
+      "User not found."
+    );
+  }
+
+  const token =
+    randomBytes(48).toString(
+      "base64url"
+    );
+
+  const tokenHash =
+    hashSessionToken(token);
+
+  const createdAt =
+    new Date();
+
+  const expiresAt =
+    new Date(
+      createdAt.getTime() +
+        SESSION_DURATION_MS
+    );
+
+  const sessionId =
+    randomUUID();
+
+  db.prepare(`
+    INSERT INTO sessions
+    (
+      id,
+      user_id,
+      token_hash,
+      expires_at,
+      created_at,
+      last_used_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    sessionId,
+    userId,
+    tokenHash,
+    expiresAt.toISOString(),
+    createdAt.toISOString(),
+    createdAt.toISOString()
+  );
+
+  /*
+   * Remove old sessions for this user.
+   * This prevents unlimited stale sessions.
+   */
+  db.prepare(`
+    DELETE FROM sessions
+    WHERE user_id = ?
+      AND id != ?
+  `).run(
+    userId,
+    sessionId
+  );
+
+  return {
+    token,
+    expiresAt:
+      expiresAt.toISOString(),
+    user:
+      getPublicUser(user),
+  };
+}
+
+export function getUserFromToken(
+  token
+) {
+  if (
+    typeof token !== "string" ||
+    !token.trim()
+  ) {
+    return null;
+  }
+
+  const tokenHash =
+    hashSessionToken(
+      token.trim()
+    );
+
+  const session =
+    db
+      .prepare(`
+        SELECT
+          s.*,
+          u.id AS user_id,
+          u.email,
+          u.name,
+          u.department,
+          u.role,
+          u.created_at AS user_created_at,
+          u.password_hash
+        FROM sessions s
+        INNER JOIN users u
+          ON u.id = s.user_id
+        WHERE s.token_hash = ?
+        LIMIT 1
+      `)
+      .get(tokenHash);
+
+  if (!session) {
+    return null;
+  }
+
+  const expires =
+    new Date(
+      session.expires_at
+    ).getTime();
+
+  if (
+    Number.isNaN(expires) ||
+    expires <= Date.now()
+  ) {
+    db.prepare(`
+      DELETE FROM sessions
+      WHERE id = ?
+    `).run(session.id);
+
+    return null;
+  }
+
+  db.prepare(`
+    UPDATE sessions
+    SET last_used_at = ?
+    WHERE id = ?
+  `).run(
+    now(),
+    session.id
+  );
+
+  return {
+    id: session.user_id,
+    email: session.email,
+    name: session.name,
+    department:
+      session.department,
+    role: session.role,
+    created_at:
+      session.user_created_at,
+  };
+}
+
+export function deleteSession(
+  token
+) {
+  if (
+    typeof token !== "string" ||
+    !token.trim()
+  ) {
+    return false;
+  }
+
+  const tokenHash =
+    hashSessionToken(
+      token.trim()
+    );
+
+  const result =
+    db.prepare(`
+      DELETE FROM sessions
+      WHERE token_hash = ?
+    `).run(tokenHash);
+
+  return result.changes > 0;
+}
+
+export function deleteUserSessions(
+  userId
+) {
+  db.prepare(`
+    DELETE FROM sessions
+    WHERE user_id = ?
+  `).run(userId);
+}
+
+export function cleanupExpiredSessions() {
+  const result =
+    db.prepare(`
+      DELETE FROM sessions
+      WHERE expires_at <= ?
+    `).run(now());
+
+  return result.changes;
+}
+
+export function isAdmin(
+  user
+) {
+  return Boolean(
+    user &&
+      String(user.role)
+        .toLowerCase() ===
+        "admin"
+  );
+}
+
+export function hasRole(
+  user,
+  roles = []
+) {
+  if (!user) {
+    return false;
+  }
+
+  const allowed =
+    Array.isArray(roles)
+      ? roles
+      : [roles];
+
+  return allowed.some(
+    (role) =>
+      String(role).toLowerCase() ===
+      String(user.role).toLowerCase()
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| RED TEAM SEED DATA
+|--------------------------------------------------------------------------
+*/
+
+const insertRedTeamTest = db.prepare(`
+  INSERT OR IGNORE INTO red_team_tests
+  (
+    id,
+    name,
+    category,
+    severity,
+    prompt,
+    expected_action,
+    is_threat,
+    direction,
+    enabled,
+    source,
+    created_at
+  )
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'SEEDED', ?)
+`);
+
+for (
+  const test of seededRedTeamTests
+) {
+  insertRedTeamTest.run(
+    String(test.id),
+    String(test.name),
+    String(test.category),
+    String(test.severity),
+    String(test.prompt),
+    String(test.expectedAction),
+    test.isThreat ? 1 : 0,
+    String(
+      test.direction ||
+        "INPUT"
+    ),
+    now()
+  );
+}
+
+db.exec(`
+  UPDATE red_team_tests
+  SET expected_action = 'SANITIZE'
+  WHERE source = 'SEEDED'
+    AND id IN (
+      'aadhaar-leakage',
+      'pan-leakage',
+      'vernacular-pii',
+      'sensitive-output'
+    )
+`);
+
+/*
+|--------------------------------------------------------------------------
+| SCANS
+|--------------------------------------------------------------------------
+*/
+
+export function saveScan(
+  scan,
+  userId = "demo-user"
+) {
+  if (!scan) {
+    throw new Error(
+      "Cannot save scan: scan object is missing."
+    );
+  }
+
+  const id =
+    scan.id || randomUUID();
+
+  const prompt =
+    typeof scan.prompt ===
+    "string"
+      ? scan.prompt
+      : typeof scan.extractedText ===
+          "string"
+        ? scan.extractedText
+        : "";
+
+  if (!prompt.trim()) {
+    throw new Error(
+      "Cannot save scan: document contains no text."
+    );
+  }
+
+  const sanitizedText =
+    scan.sanitizedText == null
+      ? null
+      : String(scan.sanitizedText);
+
+  const status =
+    scan.status || "allowed";
+
+  const label =
+    scan.label || "Allowed";
+
+  const category =
+    scan.category ||
+    "Business Request";
+
+  const riskScore =
+    Number.isFinite(
+      Number(scan.riskScore)
+    )
+      ? Number(scan.riskScore)
+      : 5;
+
+  const confidence =
+    Number.isFinite(
+      Number(scan.confidence)
+    )
+      ? Number(scan.confidence)
+      : 96;
+
+  const policy =
+    scan.policy ||
+    "Acceptable AI Usage";
+
+  const response =
+    scan.response ||
+    "Your request passed all security checks and was processed successfully.";
+
+  const department =
+    scan.department ||
+    "General";
+
+  const incidentId =
+    scan.incidentId || null;
+
+  const createdAt =
+    scan.inspectedAt || now();
+
+  db.prepare(`
+    INSERT INTO prompt_scans
+    (
+      id,
+      user_id,
+      prompt,
+      sanitized_text,
+      status,
+      label,
+      category,
+      risk_score,
+      confidence,
+      policy,
+      response,
+      detected_department,
+      incident_id,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    String(id),
+    String(
+      userId || "demo-user"
+    ),
+    String(prompt),
+    sanitizedText,
+    String(status),
+    String(label),
+    String(category),
+    riskScore,
+    confidence,
+    String(policy),
+    String(response),
+    String(department),
+    incidentId == null
+      ? null
+      : String(incidentId),
+    String(createdAt)
+  );
+
+  return {
+    ...scan,
+    id,
+    prompt,
+    sanitizedText,
+    status,
+    label,
+    category,
+    riskScore,
+    confidence,
+    policy,
+    response,
+    department,
+    incidentId,
+    inspectedAt:
+      createdAt,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| INCIDENTS
+|--------------------------------------------------------------------------
+*/
+
+export function saveIncident(
+  incident,
+  scanId,
+  userId = "demo-user"
+) {
+  if (!incident) {
+    throw new Error(
+      "Cannot save incident: incident object is missing."
+    );
+  }
+
+  const id =
+    incident.id ||
+    `INC-${Date.now()}-${randomUUID()
+      .slice(0, 6)
+      .toUpperCase()}`;
+
+  const scenarioKey =
+    incident.scenarioKey ||
+    "document-security";
+
+  const title =
+    incident.title ||
+    incident.category ||
+    "Security Incident";
+
+  const severity =
+    incident.severity ||
+    "High";
+
+  const category =
+    incident.category ||
+    "Security";
+
+  const createdAt =
+    incident.createdAt ||
+    now();
+
+  db.prepare(`
+    INSERT INTO incidents
+    (
+      id,
+      scenario_key,
+      scan_id,
+      user_id,
+      title,
+      severity,
+      category,
+      status,
+      payload_json,
+      created_at,
+      updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    String(id),
+    String(scenarioKey),
+    scanId == null
+      ? null
+      : String(scanId),
+    String(
+      userId || "demo-user"
+    ),
+    String(title),
+    String(severity),
+    String(category),
+    "UNREVIEWED",
+    JSON.stringify({
+      ...incident,
+      id,
+    }),
+    String(createdAt),
+    String(createdAt)
+  );
+
+  return {
+    ...incident,
+    id,
+  };
+}
+
+export function listIncidents() {
+  return db
+    .prepare(
+      "SELECT * FROM incidents ORDER BY created_at DESC"
+    )
+    .all()
+    .map((row) => ({
+      ...JSON.parse(
+        row.payload_json
+      ),
+      id: row.id,
+      reviewStatus:
+        row.status,
+      timestamp:
+        new Date(
+          row.created_at
+        ).toLocaleString(
+          "en-IN",
+          {
+            timeZone:
+              "Asia/Kolkata",
+          }
+        ),
+    }));
+}
+
+export function updateIncidentStatus(
+  id,
+  status
+) {
+  const result =
+    db
+      .prepare(`
+        UPDATE incidents
+        SET status = ?,
+            updated_at = ?
+        WHERE id = ?
+      `)
+      .run(
+        String(status),
+        now(),
+        String(id)
+      );
+
+  return result.changes > 0;
+}
+
+/*
+|--------------------------------------------------------------------------
+| RED TEAM
+|--------------------------------------------------------------------------
+*/
+
+export function ensureRun(
+  runId,
+  totalTests
+) {
+  db.prepare(`
+    INSERT OR IGNORE INTO red_team_runs
+    (
+      id,
+      status,
+      total_tests,
+      started_at
+    )
+    VALUES (?, ?, ?, ?)
+  `).run(
+    String(runId),
+    "RUNNING",
+    Number(totalTests) || 0,
+    now()
+  );
+}
+
+function mapRedTeamTest(
+  row
+) {
+  return {
+    id: row.id,
+    name: row.name,
+    category:
+      row.category,
+    severity:
+      row.severity,
+    prompt:
+      row.prompt,
+    expectedAction:
+      row.expected_action,
+    isThreat:
+      Boolean(row.is_threat),
+    direction:
+      row.direction,
+    enabled:
+      Boolean(row.enabled),
+    source:
+      row.source,
+    createdAt:
+      row.created_at,
+  };
+}
+
+export function listRedTeamTests() {
+  return db
+    .prepare(`
+      SELECT *
+      FROM red_team_tests
+      WHERE enabled = 1
+      ORDER BY source DESC, created_at
+    `)
+    .all()
+    .map(mapRedTeamTest);
+}
+
+export function createRedTeamTest(
+  input
+) {
+  const test = {
+    id: randomUUID(),
+
+    name: String(
+      input.name || ""
+    ).trim(),
+
+    category: String(
+      input.category || ""
+    ).trim(),
+
+    severity:
+      input.severity ||
+      "Medium",
+
+    prompt: String(
+      input.prompt || ""
+    ).trim(),
+
+    expectedAction:
+      input.expectedAction,
+
+    isThreat:
+      input.expectedAction !==
+      "ALLOW",
+
+    direction:
+      input.direction ||
+      "INPUT",
+
+    source: "CUSTOM",
+
+    createdAt: now(),
+  };
+
+  db.prepare(`
+    INSERT INTO red_team_tests
+    (
+      id,
+      name,
+      category,
+      severity,
+      prompt,
+      expected_action,
+      is_threat,
+      direction,
+      enabled,
+      source,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+  `).run(
+    test.id,
+    test.name,
+    test.category,
+    test.severity,
+    test.prompt,
+    test.expectedAction,
+    test.isThreat ? 1 : 0,
+    test.direction,
+    test.source,
+    test.createdAt
+  );
+
+  audit(
+    "RED_TEAM_TEST_CREATED",
+    "red_team_test",
+    test.id,
+    {
+      name:
+        test.name,
+      expectedAction:
+        test.expectedAction,
+    }
+  );
+
+  return test;
+}
+
+export function saveRedTeamResult(
+  result
+) {
+  db.prepare(`
+    INSERT OR REPLACE INTO red_team_results
+    (
+      id,
+      run_id,
+      test_id,
+      payload_json,
+      passed,
+      outcome,
+      risk_score,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    String(result.id),
+    String(
+      result.simulationRunId
+    ),
+    String(result.testId),
+    JSON.stringify(result),
+    result.passed ? 1 : 0,
+    String(result.outcome),
+    Number(
+      result.riskScore
+    ) || 0,
+    String(
+      result.completedAt ||
+        now()
+    )
+  );
+
+  const stats =
+    db
+      .prepare(`
+        SELECT
+          COUNT(*) AS total,
+          SUM(passed) AS passed
+        FROM red_team_results
+        WHERE run_id = ?
+      `)
+      .get(
+        String(
+          result.simulationRunId
+        )
+      );
+
+  const total =
+    Number(stats.total) || 0;
+
+  const passed =
+    Number(stats.passed) || 0;
+
+  db.prepare(`
+    UPDATE red_team_runs
+    SET
+      passed_tests = ?,
+      status =
+        CASE
+          WHEN ? >= total_tests
+          THEN 'COMPLETED'
+          ELSE 'RUNNING'
+        END,
+      completed_at =
+        CASE
+          WHEN ? >= total_tests
+          THEN ?
+          ELSE NULL
+        END
+    WHERE id = ?
+  `).run(
+    passed,
+    passed,
+    passed,
+    now(),
+    String(
+      result.simulationRunId
+    )
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| AUDIT
+|--------------------------------------------------------------------------
+*/
+
+export function audit(
+  eventType,
+  entityType,
+  entityId,
+  payload = {},
+  actor = "demo-user"
+) {
+  db.prepare(`
+    INSERT INTO audit_events
+    (
+      id,
+      event_type,
+      entity_type,
+      entity_id,
+      actor,
+      payload_json,
+      created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    randomUUID(),
+    String(eventType),
+    String(entityType),
+    String(entityId),
+    String(actor || "demo-user"),
+    JSON.stringify(
+      payload || {}
+    ),
+    now()
+  );
+}
+
+export function getAuditLog() {
+  return db
+    .prepare(`
+      SELECT *
+      FROM audit_events
+      ORDER BY created_at DESC
+      LIMIT 250
+    `)
+    .all()
+    .map((row) => ({
+      id: row.id,
+      type:
+        row.event_type,
+      entityType:
+        row.entity_type,
+      entityId:
+        row.entity_id,
+      actor:
+        row.actor,
+      ...JSON.parse(
+        row.payload_json
+      ),
+      at:
+        row.created_at,
+    }));
+}
+
+/*
+|--------------------------------------------------------------------------
+| THREAT MAP
+|--------------------------------------------------------------------------
+*/
+
+function getThreatMap() {
+  const rows =
+    db
+      .prepare(`
+        SELECT
+          detected_department AS department,
+          category,
+          COUNT(*) AS count,
+          ROUND(AVG(risk_score)) AS risk
+        FROM prompt_scans
+        WHERE status IN ('blocked', 'cleaned')
+          AND category != 'Safe Business Request'
+        GROUP BY
+          detected_department,
+          category
+        ORDER BY
+          detected_department,
+          risk DESC,
+          count DESC
+      `)
+      .all();
+
+  const points =
+    rows.map((row) => ({
+      department:
+        row.department,
+      category:
+        row.category,
+      count:
+        Number(row.count) || 0,
+      risk:
+        Number(row.risk) || 0,
+      severity:
+        Number(row.risk) >= 90
+          ? "Critical"
+          : Number(row.risk) >= 70
+            ? "Elevated"
+            : "Lower",
+    }));
+
+  const summary = {
+    critical:
+      points
+        .filter(
+          (item) =>
+            item.risk >= 90
+        )
+        .reduce(
+          (sum, item) =>
+            sum + item.count,
+          0
+        ),
+
+    warning:
+      points
+        .filter(
+          (item) =>
+            item.risk >= 70 &&
+            item.risk < 90
+        )
+        .reduce(
+          (sum, item) =>
+            sum + item.count,
+          0
+        ),
+
+    secure:
+      points
+        .filter(
+          (item) =>
+            item.risk < 70
+        )
+        .reduce(
+          (sum, item) =>
+            sum + item.count,
+          0
+        ),
+  };
+
+  return {
+    points,
+    summary,
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| DPDP
+|--------------------------------------------------------------------------
+*/
+
+function getDPDPCompliance() {
+  const scans =
+    db
+      .prepare(`
+        SELECT
+          COUNT(*) AS total,
+
+          SUM(
+            CASE
+              WHEN status = 'cleaned'
+              THEN 1
+              ELSE 0
+            END
+          ) AS sanitized,
+
+          SUM(
+            CASE
+              WHEN category IN (
+                'Personal Identity',
+                'Personal Contact Data',
+                'Sensitive Personal Data',
+                'Financial Identity'
+              )
+              THEN 1
+              ELSE 0
+            END
+          ) AS personal_data,
+
+          SUM(
+            CASE
+              WHEN status IN ('blocked', 'cleaned')
+              THEN 1
+              ELSE 0
+            END
+          ) AS protected
+        FROM prompt_scans
+      `)
+      .get();
+
+  const auditCount =
+    Number(
+      db
+        .prepare(
+          "SELECT COUNT(*) AS count FROM audit_events"
+        )
+        .get().count
+    ) || 0;
+
+  const total =
+    Number(scans.total) || 0;
+
+  const sanitized =
+    Number(
+      scans.sanitized
+    ) || 0;
+
+  const personalData =
+    Number(
+      scans.personal_data
+    ) || 0;
+
+  const protectedEvents =
+    Number(
+      scans.protected
+    ) || 0;
+
+  const consentScore =
+    personalData === 0
+      ? 100
+      : Math.round(
+          Math.min(
+            100,
+            (sanitized /
+              personalData) *
+              100
+          )
+        );
+
+  const accessScore =
+    total === 0
+      ? 100
+      : Math.round(
+          Math.min(
+            100,
+            (protectedEvents /
+              total) *
+              100 +
+              40
+          )
+        );
+
+  const auditScore =
+    total === 0
+      ? 100
+      : Math.round(
+          Math.min(
+            100,
+            (auditCount /
+              total) *
+              100
+          )
+        );
+
+  const retentionScore =
+    total === 0
+      ? 100
+      : 95;
+
+  const encryptionScore =
+    total === 0
+      ? 100
+      : 95;
+
+  const checks = [
+    {
+      name:
+        "Consent Management",
+      score:
+        consentScore,
+      status:
+        consentScore >= 80
+          ? "success"
+          : "warning",
+    },
+
+    {
+      name:
+        "Data Protection",
+      score:
+        encryptionScore,
+      status:
+        encryptionScore >= 80
+          ? "success"
+          : "warning",
+    },
+
+    {
+      name:
+        "Access Control",
+      score:
+        accessScore,
+      status:
+        accessScore >= 80
+          ? "success"
+          : "warning",
+    },
+
+    {
+      name:
+        "Audit Logging",
+      score:
+        auditScore,
+      status:
+        auditScore >= 80
+          ? "success"
+          : "warning",
+    },
+
+    {
+      name:
+        "Retention Policy",
+      score:
+        retentionScore,
+      status:
+        retentionScore >= 80
+          ? "success"
+          : "warning",
+    },
+  ];
+
+  const score =
+    Math.round(
+      checks.reduce(
+        (sum, item) =>
+          sum + item.score,
+        0
+      ) /
+        checks.length
+    );
+
+  return {
+    score,
+
+    status:
+      score >= 90
+        ? "COMPLIANT"
+        : score >= 75
+          ? "MONITOR"
+          : "ACTION REQUIRED",
+
+    checks,
+
+    generatedAt:
+      now(),
+  };
+}
+
+/*
+|--------------------------------------------------------------------------
+| AI INSIGHTS
+|--------------------------------------------------------------------------
+*/
+
+function getAIInsights() {
+  const recent =
+    db
+      .prepare(`
+        SELECT
+          detected_department,
+          category,
+          status,
+          risk_score,
+          created_at
+        FROM prompt_scans
+        ORDER BY created_at DESC
+        LIMIT 50
+      `)
+      .all();
+
+  if (
+    recent.length === 0
+  ) {
+    return [];
+  }
+
+  const insights = [];
+
+  const blocked =
+    recent.filter(
+      (item) =>
+        item.status ===
+        "blocked"
+    ).length;
+
+  const sanitized =
+    recent.filter(
+      (item) =>
+        item.status ===
+        "cleaned"
+    ).length;
+
+  const critical =
+    recent.filter(
+      (item) =>
+        Number(
+          item.risk_score
+        ) >= 90
+    ).length;
+
+  const departmentMap =
+    {};
+
+  for (
+    const event of recent
+  ) {
+    const department =
+      event.detected_department ||
+      "General";
+
+    if (
+      !departmentMap[
+        department
+      ]
+    ) {
+      departmentMap[
+        department
+      ] = {
+        count: 0,
+        risk: 0,
+      };
+    }
+
+    departmentMap[
+      department
+    ].count += 1;
+
+    departmentMap[
+      department
+    ].risk +=
+      Number(
+        event.risk_score
+      ) || 0;
+  }
+
+  const topDepartment =
+    Object.entries(
+      departmentMap
+    )
+      .map(
+        ([
+          department,
+          data,
+        ]) => ({
+          department,
+
+          score:
+            data.count > 0
+              ? Math.round(
+                  data.risk /
+                    data.count
+                )
+              : 0,
+
+          count:
+            data.count,
+        })
+      )
+      .sort(
+        (a, b) =>
+          b.score -
+          a.score
+      )[0];
+
+  if (
+    critical > 0
+  ) {
+    insights.push({
+      type:
+        "critical",
+
+      title:
+        "Critical threats detected",
+
+      message:
+        `${critical} recent security event${
+          critical === 1
+            ? ""
+            : "s"
+        } reached critical risk level.`,
+    });
+  }
+
+  if (
+    blocked > 0
+  ) {
+    insights.push({
+      type:
+        "warning",
+
+      title:
+        "Threat activity detected",
+
+      message:
+        `${blocked} recent malicious or policy-violating request${
+          blocked === 1
+            ? ""
+            : "s"
+        } were blocked.`,
+    });
+  }
+
+  if (
+    sanitized > 0
+  ) {
+    insights.push({
+      type:
+        "success",
+
+      title:
+        "Personal data protection active",
+
+      message:
+        `${sanitized} request${
+          sanitized === 1
+            ? ""
+            : "s"
+        } required sensitive-data sanitization before processing.`,
+    });
+  }
+
+  if (
+    topDepartment &&
+    topDepartment.score >=
+      70
+  ) {
+    insights.push({
+      type:
+        "warning",
+
+      title:
+        `${topDepartment.department} requires attention`,
+
+      message:
+        `This department currently has the highest observed average security risk at ${topDepartment.score}%.`,
+    });
+  }
+
+  if (
+    insights.length === 0
+  ) {
+    insights.push({
+      type:
+        "success",
+
+      title:
+        "Security posture stable",
+
+      message:
+        "Recent security events show no significant high-risk concentration.",
+    });
+  }
+
+  return insights.slice(
+    0,
+    4
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| DASHBOARD
+|--------------------------------------------------------------------------
+*/
+
+export function getDashboard() {
+  const totals =
+    db
+      .prepare(`
+        SELECT
+          COUNT(*) AS scanned,
+
+          SUM(
+            CASE
+              WHEN status = 'blocked'
+              THEN 1
+              ELSE 0
+            END
+          ) AS blocked,
+
+          SUM(
+            CASE
+              WHEN status = 'cleaned'
+              THEN 1
+              ELSE 0
+            END
+          ) AS sanitized,
+
+          AVG(risk_score) AS average_risk
+
+        FROM prompt_scans
+      `)
+      .get();
+
+  const scanned =
+    Number(
+      totals.scanned
+    ) || 0;
+
+  const blocked =
+    Number(
+      totals.blocked
+    ) || 0;
+
+  const sanitized =
+    Number(
+      totals.sanitized
+    ) || 0;
+
+  const averageRisk =
+    Number(
+      totals.average_risk
+    ) || 0;
+
+  const departments =
+    db
+      .prepare(`
+        SELECT
+          detected_department AS department,
+          COUNT(*) AS scans,
+          ROUND(AVG(risk_score)) AS score,
+
+          SUM(
+            CASE
+              WHEN status = 'blocked'
+              THEN 1
+              ELSE 0
+            END
+          ) AS blocked,
+
+          SUM(
+            CASE
+              WHEN status = 'cleaned'
+              THEN 1
+              ELSE 0
+            END
+          ) AS sanitized
+
+        FROM prompt_scans
+
+        GROUP BY detected_department
+
+        ORDER BY score DESC, scans DESC
+      `)
+      .all()
+      .map((row) => ({
+        department:
+          row.department,
+
+        scans:
+          Number(row.scans) ||
+          0,
+
+        score:
+          Number(row.score) ||
+          0,
+
+        blocked:
+          Number(row.blocked) ||
+          0,
+
+        sanitized:
+          Number(
+            row.sanitized
+          ) || 0,
+      }));
+
+  const categoryCounts =
+    db
+      .prepare(`
+        SELECT
+          category AS name,
+          COUNT(*) AS count,
+          ROUND(AVG(risk_score)) AS risk
+        FROM prompt_scans
+        GROUP BY category
+        ORDER BY count DESC
+      `)
+      .all();
+
+  const categories =
+    categoryCounts.map(
+      (item) => ({
+        name:
+          item.name,
+
+        count:
+          Number(
+            item.count
+          ) || 0,
+
+        value:
+          scanned
+            ? Math.round(
+                (Number(
+                  item.count
+                ) /
+                  scanned) *
+                  100
+              )
+            : 0,
+
+        risk:
+          Number(
+            item.risk
+          ) || 0,
+      })
+    );
+
+  const recentEvents =
+    db
+      .prepare(`
+        SELECT
+          created_at,
+          status
+        FROM prompt_scans
+        ORDER BY created_at DESC
+        LIMIT 60
+      `)
+      .all()
+      .reverse();
+
+  const running = {
+    allowed: 0,
+    blocked: 0,
+    sanitized: 0,
+  };
+
+  const hourlyActivity =
+    recentEvents.map(
+      (
+        event,
+        index
+      ) => {
+        if (
+          event.status ===
+          "allowed"
+        ) {
+          running.allowed += 1;
+        }
+
+        if (
+          event.status ===
+          "blocked"
+        ) {
+          running.blocked += 1;
+        }
+
+        if (
+          event.status ===
+          "cleaned"
+        ) {
+          running.sanitized +=
+            1;
+        }
+
+        const eventTime =
+          new Date(
+            event.created_at
+          );
+
+        return {
+          time:
+            `${eventTime.toLocaleTimeString(
+              "en-IN",
+              {
+                hour:
+                  "2-digit",
+                minute:
+                  "2-digit",
+              }
+            )} #${
+              index + 1
+            }`,
+
+          allowed:
+            running.allowed,
+
+          blocked:
+            running.blocked,
+
+          sanitized:
+            running.sanitized,
+        };
+      }
+    );
+
+  const dailyActivity =
+    db
+      .prepare(`
+        SELECT
+          substr(created_at, 1, 10) AS time,
+
+          SUM(
+            CASE
+              WHEN status = 'allowed'
+              THEN 1
+              ELSE 0
+            END
+          ) AS allowed,
+
+          SUM(
+            CASE
+              WHEN status = 'blocked'
+              THEN 1
+              ELSE 0
+            END
+          ) AS blocked,
+
+          SUM(
+            CASE
+              WHEN status = 'cleaned'
+              THEN 1
+              ELSE 0
+            END
+          ) AS sanitized
+
+        FROM prompt_scans
+
+        GROUP BY
+          substr(created_at, 1, 10)
+
+        ORDER BY time DESC
+
+        LIMIT 30
+      `)
+      .all()
+      .reverse()
+      .map((item) => ({
+        time:
+          item.time,
+
+        allowed:
+          Number(
+            item.allowed
+          ) || 0,
+
+        blocked:
+          Number(
+            item.blocked
+          ) || 0,
+
+        sanitized:
+          Number(
+            item.sanitized
+          ) || 0,
+      }));
+
+  const activity = {
+    "24H":
+      hourlyActivity,
+
+    "7D":
+      dailyActivity.slice(
+        -7
+      ),
+
+    "30D":
+      dailyActivity,
+  };
+
+  const redTeam =
+    db
+      .prepare(`
+        SELECT
+          COUNT(*) AS total,
+          SUM(passed) AS passed
+        FROM red_team_results
+      `)
+      .get();
+
+  const redTeamTotal =
+    Number(
+      redTeam.total
+    ) || 0;
+
+  const redTeamPassed =
+    Number(
+      redTeam.passed
+    ) || 0;
+
+  const redTeamScore =
+    redTeamTotal > 0
+      ? Math.round(
+          (redTeamPassed /
+            redTeamTotal) *
+            100
+        )
+      : null;
+
+  const operationalScore =
+    scanned > 0
+      ? Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              100 -
+                averageRisk
+            )
+          )
+        )
+      : 100;
+
+  const securityScore =
+    redTeamScore === null
+      ? operationalScore
+      : Math.max(
+          0,
+          Math.min(
+            100,
+            Math.round(
+              operationalScore *
+                0.6 +
+                redTeamScore *
+                  0.4
+            )
+          )
+        );
+
+  return {
+    kpis: {
+      scanned,
+      blocked,
+      sanitized,
+      securityScore,
+
+      riskPrevented:
+        `₹${(
+          blocked * 2.5 +
+          sanitized * 0.5
+        ).toFixed(1)}L`,
+    },
+
+    departments,
+
+    categories,
+
+    activity,
+
+    threatMap:
+      getThreatMap(),
+
+    dpdp:
+      getDPDPCompliance(),
+
+    insights:
+      getAIInsights(),
+
+    generatedAt:
+      now(),
+  };
+}

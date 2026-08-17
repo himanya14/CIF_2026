@@ -1,260 +1,208 @@
-.dashboard{
-    padding:28px;
-    background:#081321;
-    min-height:100vh;
+.dashboard {
+    padding: 28px;
+    background: #081321;
+    min-height: 100vh;
+    color: white;
 }
 
-/* ===========================
-   Scanner
-=========================== */
+/* =========================
+   SCANNER
+========================= */
 
-.scanner{
-    margin:25px 0;
+.scanner {
+    margin: 25px 0;
 }
 
-.scanner span{
-    color:#00d4ff;
-    font-size:13px;
-    letter-spacing:2px;
-    font-weight:600;
+.scanner span {
+    color: #00d4ff;
+    font-size: 13px;
+    letter-spacing: 2px;
+    font-weight: 600;
 }
 
-.scan-line{
-    margin-top:10px;
-    height:3px;
-    background:#18314f;
-    border-radius:30px;
-    overflow:hidden;
-    position:relative;
+.scan-line {
+    margin-top: 10px;
+    height: 3px;
+    background: #18314f;
+    border-radius: 30px;
+    overflow: hidden;
+    position: relative;
 }
 
-.scan-dot{
-    width:12px;
-    height:12px;
-    border-radius:50%;
-    background:#00d4ff;
-    position:absolute;
-    top:50%;
-    transform:translateY(-50%);
-    animation:scan 3s linear infinite;
-    box-shadow:0 0 15px #00d4ff;
+.scan-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #00d4ff;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    animation: scan 3s linear infinite;
+    box-shadow: 0 0 15px #00d4ff;
 }
 
-@keyframes scan{
+@keyframes scan {
+    0% {
+        left: -10px;
+    }
 
-0%{
-left:-10px;
+    100% {
+        left: 100%;
+    }
 }
 
-100%{
-left:100%;
+/* =========================
+   KPI
+========================= */
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(5, minmax(0, 1fr));
+    gap: 20px;
 }
 
+/* =========================
+   MAIN CHARTS
+========================= */
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 25px;
+    margin-top: 28px;
 }
 
-/* ===========================
-   KPI GRID
-=========================== */
-
-.kpi-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:24px;
-}
-
-/* ===========================
-   CHARTS
-=========================== */
-
-.chart-grid{
-
-    display:grid;
-    grid-template-columns:2fr 1fr;
-
-    gap:28px;
-
-    margin-top:30px;
-
-}
-
-/* ===========================
+/* =========================
    MIDDLE
-=========================== */
+========================= */
 
-.middle-grid{
-
-    display:grid;
-    grid-template-columns:1fr 1fr;
-
-    gap:28px;
-
-    margin-top:30px;
-
+.middle-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-top: 28px;
 }
 
-/* ===========================
+/* =========================
    BOTTOM
-=========================== */
+========================= */
 
-.bottom-grid{
-
-    display:grid;
-    grid-template-columns:1fr 1fr;
-
-    gap:28px;
-
-    margin-top:30px;
-
+.bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-top: 28px;
 }
 
-/* ===========================
-   RISK CARD
-=========================== */
+/* =========================
+   RISK
+========================= */
 
-.risk-card{
-
-    background:#111d31;
-
-    border:1px solid #223b5b;
-
-    border-radius:22px;
-
-    padding:28px;
-
+.risk-card {
+    background: #111d31;
+    border: 1px solid #223b5b;
+    border-radius: 20px;
+    padding: 24px;
+    min-height: 330px;
 }
 
-.risk-card h2{
-
-    color:white;
-
-    margin-bottom:28px;
-
-    font-size:28px;
-
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
 }
 
-.risk-bars{
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:22px;
-
+.section-heading h2 {
+    margin: 0;
+    color: white;
+    font-size: 24px;
 }
 
-.risk-row{
-
-    display:grid;
-
-    grid-template-columns:120px 1fr 40px;
-
-    align-items:center;
-
-    gap:16px;
-
+.live-small {
+    background: rgba(0, 212, 255, 0.12);
+    border: 1px solid #00d4ff;
+    color: #00d4ff;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
 }
 
-.risk-row span{
-
-    color:white;
-
+.risk-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
 }
 
-.progress{
-
-    width:100%;
-
-    height:10px;
-
-    background:#1d3150;
-
-    border-radius:20px;
-
-    overflow:hidden;
-
+.risk-row {
+    display: grid;
+    grid-template-columns: 120px 1fr 40px;
+    align-items: center;
+    gap: 16px;
 }
 
-.progress div{
-
-    height:100%;
-
-    border-radius:20px;
-
+.risk-row span {
+    color: #dce8f7;
+    font-size: 14px;
 }
 
-.finance{
-    width:91%;
-    background:#ff4d4f;
+.progress {
+    width: 100%;
+    height: 10px;
+    background: #1d3150;
+    border-radius: 20px;
+    overflow: hidden;
 }
 
-.hr{
-    width:74%;
-    background:#ff8c42;
+.progress div {
+    height: 100%;
+    border-radius: inherit;
+    transition: width 0.5s ease;
 }
 
-.it{
-    width:58%;
-    background:#ffc107;
+.risk-row strong {
+    color: white;
+    text-align: right;
+    font-size: 14px;
 }
 
-.legal{
-    width:42%;
-    background:#42a5f5;
+.empty-state {
+    color: #8ea8cf;
+    padding: 50px 0;
+    text-align: center;
 }
 
-.ops{
-    width:34%;
-    background:#26c6da;
-}
-
-.marketing{
-    width:18%;
-    background:#4caf50;
-}
-
-.risk-row strong{
-
-    color:white;
-
-    text-align:right;
-
-}
-
-/* ===========================
+/* =========================
    RESPONSIVE
-=========================== */
+========================= */
 
-@media(max-width:1200px){
-
-.chart-grid,
-.middle-grid,
-.bottom-grid{
-
-grid-template-columns:1fr;
-
+@media (max-width: 1300px) {
+    .kpi-grid {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+    }
 }
 
+@media (max-width: 1100px) {
+    .chart-grid,
+    .middle-grid,
+    .bottom-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
-@media(max-width:768px){
+@media (max-width: 700px) {
+    .dashboard {
+        padding: 18px;
+    }
 
-.dashboard{
+    .kpi-grid {
+        grid-template-columns: 1fr;
+    }
 
-padding:18px;
-
-}
-
-.kpi-grid{
-
-grid-template-columns:1fr;
-
-}
-
-.risk-row{
-
-grid-template-columns:90px 1fr 35px;
-
-}
-
+    .risk-row {
+        grid-template-columns: 90px 1fr 35px;
+    }
 }

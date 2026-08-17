@@ -3,14 +3,12 @@ import { useEffect, useState } from "react";
 import { getDashboard } from "../services/api";
 
 import Navbar from "../components/Navbar";
-
 import KPICard from "../components/KPICard";
 import ActivityChart from "../components/ActivityChart";
 import ViolationChart from "../components/ViolationChart";
 import ThreatMap from "../components/ThreatMap";
 import DPDPCompliance from "../components/DPDPCompliance";
 import AIInsights from "../components/AIInsights";
-import DepartmentTable from "../components/DepartmentTable";
 import Footer from "../components/Footer";
 
 import {
@@ -23,37 +21,107 @@ import {
 
 function Dashboard() {
   const [liveData, setLiveData] = useState({
-    kpis: { scanned: 0, blocked: 0, sanitized: 0, securityScore: 100, riskPrevented: "₹0.0L" },
-    activity: { "24H": [], "7D": [], "30D": [] }, categories: [], departments: [],
+    kpis: {
+      scanned: 0,
+      blocked: 0,
+      sanitized: 0,
+      securityScore: 0,
+      riskPrevented: "₹0.0L",
+    },
+
+    activity: {
+      "24H": [],
+      "7D": [],
+      "30D": [],
+    },
+
+    categories: [],
+    departments: [],
+
+    threatMap: {
+      points: [],
+      summary: {
+        critical: 0,
+        warning: 0,
+        secure: 0,
+      },
+    },
+
+    dpdp: {
+      score: 0,
+      status: "NO DATA",
+      checks: [],
+    },
+
+    insights: [],
+
+    generatedAt: null,
   });
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const loadDashboard = () => getDashboard().then(setLiveData).catch(error => console.warn("Dashboard API unavailable", error));
+    let mounted = true;
+
+    const loadDashboard = async () => {
+      try {
+        const data = await getDashboard();
+
+        if (mounted) {
+          setLiveData(data);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.warn(
+          "Dashboard API unavailable:",
+          error
+        );
+
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     loadDashboard();
-    const timer = setInterval(loadDashboard, 3000);
-    return () => clearInterval(timer);
+
+    const timer = setInterval(
+      loadDashboard,
+      3000
+    );
+
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
   }, []);
+
   return (
     <div className="dashboard">
-
       <Navbar />
 
-      {/* Scanner */}
-
       <div className="scanner">
-
-        <span>SYSTEM SCANNING...</span>
+        <span>
+          {loading
+            ? "CONNECTING TO WATCHTOWER..."
+            : "SYSTEM SCANNING..."}
+        </span>
 
         <div className="scan-line">
           <div className="scan-dot"></div>
         </div>
 
+        {liveData.generatedAt && (
+          <small>
+            Last updated:{" "}
+            {new Date(
+              liveData.generatedAt
+            ).toLocaleTimeString("en-IN")}
+          </small>
+        )}
       </div>
 
-      {/* KPI Cards */}
-
       <div className="kpi-grid">
-
         <KPICard
           title="Prompts Scanned"
           value={liveData.kpis.scanned}
@@ -80,7 +148,7 @@ function Dashboard() {
 
         <KPICard
           title="Security Score"
-          value={liveData.kpis.securityScore}
+          value={`${liveData.kpis.securityScore}%`}
           trend="Live"
           icon={<FaShieldAlt />}
           color="#a855f7"
@@ -89,78 +157,107 @@ function Dashboard() {
         <KPICard
           title="Risk Prevented"
           value={liveData.kpis.riskPrevented}
-          trend="Calculated"
+          trend="Live"
           icon={<FaRupeeSign />}
           color="#ffb000"
         />
-
       </div>
-
-      {/* Top Charts */}
 
       <div className="chart-grid">
+        <ActivityChart
+          liveData={liveData.activity}
+        />
 
-        <ActivityChart liveData={liveData.activity} />
-
-        <ViolationChart liveData={liveData.categories} total={liveData.kpis.scanned} />
-
+        <ViolationChart
+          liveData={liveData.categories}
+          total={liveData.kpis.scanned}
+        />
       </div>
-
-      {/* Middle */}
 
       <div className="middle-grid">
+        <ThreatMap
+          liveData={liveData.threatMap}
+        />
 
-        <ThreatMap />
-
-        <DPDPCompliance />
-
+        <DPDPCompliance
+          liveData={liveData.dpdp}
+        />
       </div>
-
-      {/* Bottom */}
 
       <div className="bottom-grid">
-
         <div className="risk-card">
+          <div className="section-heading">
+            <div>
+              <h2>Risk by Department</h2>
 
-          <h2>Risk by Department</h2>
-
-          <div className="risk-bars">
-
-            {liveData.departments.length === 0 ? (
-              <p>No department activity yet. Submit prompts in Employee Chat.</p>
-            ) : liveData.departments.map((department) => (
-              <div className="risk-row" key={department.department}>
-                <span>{department.department}</span>
-                <div className="progress">
-                  <div
-                    style={{
-                      width: `${Math.max(2, Number(department.score || 0))}%`,
-                      background: Number(department.score || 0) >= 75
-                        ? "#ff5252"
-                        : Number(department.score || 0) >= 45
-                          ? "#ffb000"
-                          : "#22e37d",
-                      height: "100%",
-                      borderRadius: "inherit",
-                    }}
-                  ></div>
-                </div>
-                <strong>{department.score}</strong>
-              </div>
-            ))}
-
+              <p>
+                Live risk calculated from actual
+                security events stored in SQLite.
+              </p>
+            </div>
           </div>
 
+          <div className="risk-bars">
+            {liveData.departments.length === 0 ? (
+              <p className="empty-state">
+                No department activity yet.
+                Submit prompts in Employee Chat.
+              </p>
+            ) : (
+              liveData.departments.map(
+                (department) => {
+                  const score = Number(
+                    department.score || 0
+                  );
+
+                  return (
+                    <div
+                      className="risk-row"
+                      key={
+                        department.department
+                      }
+                    >
+                      <span>
+                        {department.department}
+                      </span>
+
+                      <div className="progress">
+                        <div
+                          style={{
+                            width: `${Math.max(
+                              2,
+                              Math.min(
+                                score,
+                                100
+                              )
+                            )}%`,
+                            background:
+                              score >= 75
+                                ? "#ff5252"
+                                : score >= 45
+                                  ? "#ffb000"
+                                  : "#22e37d",
+                          }}
+                        />
+                      </div>
+
+                      <strong>
+                        {score}
+                      </strong>
+                    </div>
+                  );
+                }
+              )
+            )}
+          </div>
         </div>
 
-        <AIInsights />
-
+        <AIInsights
+          liveData={liveData.insights}
+        />
       </div>
 
-      <DepartmentTable liveData={liveData.departments} />
-
       <Footer />
-
     </div>
   );
 }
